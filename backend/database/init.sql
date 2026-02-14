@@ -29,9 +29,24 @@ CREATE TABLE organization_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    role VARCHAR(20) NOT NULL DEFAULT 'member',
+    role VARCHAR(20) NOT NULL DEFAULT 'member'
+         CHECK (role IN ('owner', 'member')),
     joined_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(organization_id, user_id)
+);
+
+
+CREATE TABLE org_invites (
+    id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID         NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    email           VARCHAR(255) NOT NULL,
+    token           VARCHAR(64)  UNIQUE NOT NULL,
+    role            VARCHAR(20)  NOT NULL DEFAULT 'member'
+                    CHECK (role IN ('owner', 'member')),
+    invited_by      UUID         REFERENCES users(id),
+    accepted_at     TIMESTAMPTZ,
+    expires_at      TIMESTAMPTZ  NOT NULL,
+    created_at      TIMESTAMPTZ  DEFAULT NOW()
 );
 
 -- Each Organization can have multiple projects
@@ -159,4 +174,10 @@ CREATE INDEX idx_logs_level ON logs (project_id, level, time DESC);
 CREATE INDEX idx_metrics_project_name_time ON metrics (project_id, metric_name, time DESC);
 
 CREATE INDEX idx_uptime_endpoint_time ON uptime_checks (endpoint_id, time DESC);
+
+CREATE INDEX idx_org_invites_token
+    ON org_invites (token);
+
+CREATE INDEX idx_org_invites_email
+    ON org_invites (organization_id, email);
 
