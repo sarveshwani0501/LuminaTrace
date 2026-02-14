@@ -1,6 +1,9 @@
 import Fastify from "fastify";
 import config from "./config/index.js";
 import dbPlugin from "./config/database.js";
+import corsPlugin from "./plugins/cors.js";
+import jwtPlugin from "./plugins/jwt.js";
+import swaggerPlugin from "./plugins/swagger.js";
 
 export async function buildApp() {
   const fastify = Fastify({
@@ -11,6 +14,12 @@ export async function buildApp() {
 
   // Register database plugin
   await fastify.register(dbPlugin);
+  // CORS Plugin
+  await fastify.register(corsPlugin);
+  // JWT Plugin
+  await fastify.register(jwtPlugin);
+  // Swagger Plugin
+  await fastify.register(swaggerPlugin);
 
   fastify.get("/health", async (request, reply) => {
     try {
