@@ -152,16 +152,6 @@ function validateConfig() {
 
 validateConfig();
 
-if (config.app.env === "development") {
-  console.log("Configuration loaded successfully");
-  console.log("Environment:", config.app.env);
-  console.log("Port:", config.app.port);
-  console.log(
-    "Database:",
-    `${config.database.host}:${config.database.port}/${config.database.name}`,
-  );
-}
-
 export default config;
 
 // some changes to be made once development done

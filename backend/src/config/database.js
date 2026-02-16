@@ -4,26 +4,30 @@ import config from "./index.js";
 
 const { Pool } = pkg;
 
-async function postgresPlugin(fastify, options) {
-  const poolConfig = config.database.url
-    ? {
-        connectionString: config.database.url,
-        min: config.database.pool.min,
-        max: config.database.pool.max,
-        idleTimeoutMillis: config.database.pool.idle,
-      }
-    : {
-        host: config.database.host,
-        port: config.database.port,
-        user: config.database.user,
-        password: config.database.password,
-        database: config.database.name,
-        min: config.database.pool.min,
-        max: config.database.pool.max,
-        idleTimeoutMillis: config.database.pool.idle,
-      };
+const poolConfig = config.database.url
+  ? {
+      connectionString: config.database.url,
+      min: config.database.pool.min,
+      max: config.database.pool.max,
+      idleTimeoutMillis: config.database.pool.idle,
+    }
+  : {
+      host: config.database.host,
+      port: config.database.port,
+      user: config.database.user,
+      password: config.database.password,
+      database: config.database.name,
+      min: config.database.pool.min,
+      max: config.database.pool.max,
+      idleTimeoutMillis: config.database.pool.idle,
+    };
 
-  const pool = new Pool(poolConfig);
+
+export const pool = new Pool(poolConfig);
+
+async function postgresPlugin(fastify, options) {
+  
+
 
   try {
     const result = await pool.query(
