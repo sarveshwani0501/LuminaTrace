@@ -19,7 +19,7 @@ async function jwtPlugin(fastify, opt) {
       path: "/",
       httpOnly: true,
       secure: config.app.env === "production",
-      sameSite: strict,
+      sameSite: "strict",
       maxAge: 86400,
     });
   });

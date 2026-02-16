@@ -1,14 +1,11 @@
-import slugify from "slugify";
-import fp from "fastify-plugin";
+import slugifyLib from "slugify";
 
-async function slug(fastify) {
-  fastify.decorate("slugify", (text) => {
-    slugify(text, {
-      lower: true,
-      strict: true,
-      trim: true,
-    });
+export function slugify(text) {
+  return slugifyLib(text, {
+    lower: true,
+    strict: true,
+    trim: true,
   });
 }
 
-export default fp(slug);
+export default slugify;
