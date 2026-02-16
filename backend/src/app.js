@@ -5,13 +5,22 @@ import corsPlugin from "./plugins/cors.js";
 import jwtPlugin from "./plugins/jwt.js";
 import swaggerPlugin from "./plugins/swagger.js";
 import rateLimitPlugin from "./plugins/rate-limit.js";
-
 import errorHandler from "./middlewares/errorHandler.js";
+import authRoutes from "./modules/auth/authRoute.js";
 
 export async function buildApp() {
   const fastify = Fastify({
     logger: {
       level: config.logging.level,
+      transport:
+        config.app.env === "development"
+          ? {
+              target: "pino-pretty",
+              options: {
+                colorize: true,
+              },
+            }
+          : undefined,
     },
   });
 
@@ -27,6 +36,10 @@ export async function buildApp() {
   await fastify.register(rateLimitPlugin);
   // proper error handling
   fastify.setErrorHandler(errorHandler);
+
+  
+  // Register Routes
+  await fastify.register(authRoutes);
 
   fastify.get("/health", async (request, reply) => {
     try {
@@ -49,6 +62,5 @@ export async function buildApp() {
 
   return fastify;
 }
-
 
 export default buildApp;
