@@ -7,6 +7,7 @@ import swaggerPlugin from "./plugins/swagger.js";
 import rateLimitPlugin from "./plugins/rate-limit.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import authRoutes from "./modules/auth/authRoute.js";
+import organizationRoutes from "./modules/organizations/organizationRoute.js";
 
 export async function buildApp() {
   const fastify = Fastify({
@@ -37,9 +38,10 @@ export async function buildApp() {
   // proper error handling
   fastify.setErrorHandler(errorHandler);
 
-  
   // Register Routes
   await fastify.register(authRoutes);
+
+  await fastify.register(organizationRoutes);
 
   fastify.get("/health", async (request, reply) => {
     try {

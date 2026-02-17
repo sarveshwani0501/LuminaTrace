@@ -56,7 +56,7 @@ export async function inviteMember(req, reply) {
       message: "Organization Id is NULL",
     };
   }
-  const invitedBy = req.user.id;
+  const invitedBy = req.user.userId;
   const res = await orgService.createInvite(orgId, email, role, invitedBy);
 
   return reply.code(201).send({
@@ -81,7 +81,7 @@ export async function removeOrgMember(req, reply) {
     };
   }
 
-  const requestedBy = req.user.id;
+  const requestedBy = req.user.userId;
 
   const res = await orgService.removeMember(orgId, userId, requestedBy);
 

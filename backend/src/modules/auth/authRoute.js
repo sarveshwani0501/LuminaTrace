@@ -12,6 +12,7 @@ export default async function authRoutes(fastify) {
 
   fastify.post("/auth/login", { schema: loginSchema }, ctrl.login);
 
+  // to be removed
   fastify.post(
     "/auth/signup/invite/:token",
     { schema: signupViaInviteSchema },
