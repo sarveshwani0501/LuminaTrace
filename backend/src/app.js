@@ -8,6 +8,8 @@ import rateLimitPlugin from "./plugins/rate-limit.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import authRoutes from "./modules/auth/authRoute.js";
 import organizationRoutes from "./modules/organizations/organizationRoute.js";
+import inviteRoute from "./modules/invites/inviteRoute.js";
+import projectRoute from "./modules/projects/projectRoute.js";
 
 export async function buildApp() {
   const fastify = Fastify({
@@ -42,6 +44,10 @@ export async function buildApp() {
   await fastify.register(authRoutes);
 
   await fastify.register(organizationRoutes);
+
+  await fastify.register(inviteRoute);
+
+  await fastify.register(projectRoute);
 
   fastify.get("/health", async (request, reply) => {
     try {
