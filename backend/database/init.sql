@@ -60,6 +60,7 @@ CREATE TABLE projects (
     slug VARCHAR(100) NOT NULL,
     description TEXT,
     api_key VARCHAR(100) UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
+    api_key_preview VARCHAR(12)  NOT NULL,  
     retention_days INTEGER DEFAULT 30,
     created_at TIMESTAMPTZ DEFAULT now(),
     created_by UUID REFERENCES users(id),
