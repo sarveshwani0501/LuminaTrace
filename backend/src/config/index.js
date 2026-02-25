@@ -70,7 +70,7 @@ const config = {
   },
 
   kafka: {
-    broker: getEnvVar("KAFKA_BROKER", "localhost:9094"),
+    broker: getEnvVar("KAFKA_BROKER", "localhost:9092"),
     clientId: getEnvVar("KAFKA_CLIENT_ID", "luminatrace-backend"),
     groupId: getEnvVar("KAFKA_GROUP_ID", "luminatrace-consumers"),
   },

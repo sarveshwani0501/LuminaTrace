@@ -12,7 +12,7 @@
 
 // POST /organizations/:orgId/projects/:projId/rotate-key
 
-import { pool } from "../../config/database";
+import { pool } from "../../config/database.js";
 
 export async function getAll(orgId) {
   const res = await pool.query(

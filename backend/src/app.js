@@ -10,6 +10,12 @@ import authRoutes from "./modules/auth/authRoute.js";
 import organizationRoutes from "./modules/organizations/organizationRoute.js";
 import inviteRoute from "./modules/invites/inviteRoute.js";
 import projectRoute from "./modules/projects/projectRoute.js";
+import {
+  connectProducer,
+  disconnectProducer,
+  isProducerConnected,
+} from "./kafka/producer.js";
+import logger from "./utils/logger.js";
 
 export async function buildApp() {
   const fastify = Fastify({
@@ -40,6 +46,17 @@ export async function buildApp() {
   // proper error handling
   fastify.setErrorHandler(errorHandler);
 
+  try {
+    await connectProducer();
+  } catch (error) {
+    fastify.log.error({ error }, "Failed to connect Kafka producer");
+  }
+
+  fastify.addHook("onClose", async () => {
+    fastify.log.info("Shutting down Kafka producer...");
+    await disconnectProducer();
+  });
+
   // Register Routes
   await fastify.register(authRoutes);
 
@@ -50,22 +67,26 @@ export async function buildApp() {
   await fastify.register(projectRoute);
 
   fastify.get("/health", async (request, reply) => {
+    const health = {
+      status: "ok",
+      environment: config.app.env,
+      database: "disconnected",
+      kafka: isProducerConnected() ? "connected" : "disconnected",
+    };
+
     try {
       await fastify.pg.query("SELECT 1");
-
-      return {
-        status: "ok",
-        environment: config.app.env,
-        database: "connected",
-      };
+      health.database = "connected";
     } catch (error) {
-      reply.code(503);
-      return {
-        status: "error",
-        error: error.message,
-        database: "disconnected",
-      };
+      health.status = "degraded";
+      health.error = error.message;
     }
+
+    if (health.database === "disconnected") {
+      reply.code(503);
+    }
+
+    return health;
   });
 
   return fastify;
