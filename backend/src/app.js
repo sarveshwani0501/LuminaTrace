@@ -10,12 +10,12 @@ import authRoutes from "./modules/auth/authRoute.js";
 import organizationRoutes from "./modules/organizations/organizationRoute.js";
 import inviteRoute from "./modules/invites/inviteRoute.js";
 import projectRoute from "./modules/projects/projectRoute.js";
+import ingestRoute from "./modules/ingest/ingestRoute.js";
 import {
   connectProducer,
   disconnectProducer,
   isProducerConnected,
 } from "./kafka/producer.js";
-import logger from "./utils/logger.js";
 
 export async function buildApp() {
   const fastify = Fastify({
@@ -65,6 +65,8 @@ export async function buildApp() {
   await fastify.register(inviteRoute);
 
   await fastify.register(projectRoute);
+
+  await fastify.register(ingestRoute);
 
   fastify.get("/health", async (request, reply) => {
     const health = {
