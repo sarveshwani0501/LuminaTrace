@@ -1,8 +1,8 @@
 import kafka from "../config/kafka.js";
 
-export default function createConsumer(groupID) {
+export default function createConsumer(groupId) {
   const consumer = kafka.consumer({
-    groupID,
+    groupId,
     sessionTimeout: 30000,
     heartbeatInterval: 3000,
     allowAutoTopicCreation: false,
@@ -10,5 +10,3 @@ export default function createConsumer(groupID) {
 
   return consumer;
 }
-
-//export default createConsumer;

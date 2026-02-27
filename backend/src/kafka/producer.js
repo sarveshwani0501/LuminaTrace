@@ -40,11 +40,11 @@ export async function send(topic, messages) {
   }
 
   // we need to check if the messages is an array or not because kafka needs messages array
-  const messagesArray = Array.isArray(messages) ? messages : messages;
+  const messagesArray = Array.isArray(messages) ? messages : [messages];
 
   // now we need to make it according to our format because message structure is --> {key, value, partition, timestamp, headers}
   const kafkaMsgs = messagesArray.map((msg) => ({
-    key: msg.projectId,
+    key: msg.projectId ? msg.projectId.toString() : null,
     value: JSON.stringify(msg),
     timestamp: Date.now().toString(),
   }));
