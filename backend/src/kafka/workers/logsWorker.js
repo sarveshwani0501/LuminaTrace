@@ -46,7 +46,7 @@ export async function startLogsWorker() {
           });
 
           if (!server) {
-            log.serverId = createServer({ projectId, hostname });
+            log.serverId = await createServer({ projectId, hostname });
             logger.info({ hostname: hostname }, "Auto registered server");
           } else {
             log.serverId = server.id;
@@ -74,7 +74,7 @@ export async function startLogsWorker() {
         const ttl = Math.floor((endOfDay - now) / 1000);
         await redis.expire(statsKey, ttl);
 
-        const recentLogsKey = `recent_logs:${projectId}`;
+        const recentLogsKey = `recent_logs:${log.projectId}`;
 
         const logsSummary = JSON.stringify({
           timestamp: log.timestamp,

@@ -1,0 +1,85 @@
+import * as metricRepo from "../../modules/metrics/metricsRepository.js";
+import createConsumer from "../consumer.js";
+import { topics } from "../topics.js";
+import {
+  createServer,
+  findServerByHostName,
+} from "../../modules/servers/serverRepository.js";
+import logger from "../../utils/logger.js";
+import redis, { incrementHashField } from "../../config/redis.js";
+import { insertMetric } from "../../modules/metrics/metricsRepository.js";
+
+export async function startMetricsWorker() {
+  const consumer = createConsumer("metrics-worker");
+
+  await consumer.connect();
+  logger.info("Metrics worker connected");
+
+  await consumer.subscribe({ topic: topics.METRICS, fromBeginning: false });
+
+  await consumer.run({
+    eachMessage: async ({ topic, partition, message }) => {
+      let metric;
+      try {
+        metric = JSON.parse(message.value.toString());
+
+        logger.debug(
+          { projectId: metric.projectId, name: metric.name },
+          "Processing metric",
+        );
+
+        if (!metric.serverId && metric.hostname) {
+          let server = await findServerByHostName({
+            projectId: metric.projectId,
+            hostname: metric.hostname,
+          });
+
+          if (!server) {
+            metric.serverId = await createServer({
+              projectId: metric.projectId,
+              hostname: metric.hostname,
+            });
+            logger.info(
+              { hostname: metric.hostname },
+              "Auto-registered server",
+            );
+          } else {
+            metric.serverId = server.id;
+          }
+        }
+
+        await insertMetric(metric);
+
+        const metricKey = `latest_metric:${metric.projectId}`;
+
+        await redis.hset(metricKey, metric.name, metric.value);
+        await redis.expire(metricKey, 300);
+
+        if (metric.name === "response_time" || metric.name === "latency") {
+          const statsKey = `stats:${metric.projectId}:today`;
+          await incrementHashField(statsKey, "response_time", metric.value);
+          await incrementHashField(statsKey, "latency_count", 1);
+
+          const now = Date.now();
+
+          const endOfDay = new Date(now);
+
+          endOfDay.setHours(23, 59, 59, 999);
+
+          const ttl = Math.floor((endOfDay - now) / 1000);
+
+          await redis.expire(statsKey, ttl);
+        }
+
+        // socket io code
+
+        logger.debug(
+          { projectId: metric.projectId },
+          "Metrics processed successfully",
+        );
+      } catch (err) {
+        logger.error({ err, metric }, "Failed to process metric message");
+      }
+    },
+  });
+}
