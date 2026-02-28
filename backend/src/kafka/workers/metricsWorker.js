@@ -2,8 +2,9 @@ import * as metricRepo from "../../modules/metrics/metricsRepository.js";
 import createConsumer from "../consumer.js";
 import { topics } from "../topics.js";
 import {
-  createServer,
+  findServerById,
   findServerByHostName,
+  createServer,
 } from "../../modules/servers/serverRepository.js";
 import logger from "../../utils/logger.js";
 import redis, { incrementHashField } from "../../config/redis.js";
@@ -28,23 +29,54 @@ export async function startMetricsWorker() {
           "Processing metric",
         );
 
-        if (!metric.serverId && metric.hostname) {
-          let server = await findServerByHostName({
+        if (metric.serverId) {
+          const server = await findServerById({ serverId: metric.serverId });
+          if (!server) {
+            if (metric.hostname) {
+              logger.warn(
+                { serverId: metric.serverId, hostname: metric.hostname },
+                "ServerId not found, using hostname instead",
+              );
+              const serverByHost = await findServerByHostName({
+                projectId: metric.projectId,
+                hostname: metric.hostname,
+              });
+              if (serverByHost) {
+                metric.serverId = serverByHost.id;
+              } else {
+                metric.serverId = await createServer({
+                  projectId: metric.projectId,
+                  hostname: metric.hostname,
+                });
+                logger.info(
+                  { hostname: metric.hostname },
+                  "Auto registered server",
+                );
+              }
+            } else {
+              logger.warn(
+                { serverId: metric.serverId },
+                "ServerId not found and no hostname provided, setting serverId to null",
+              );
+              metric.serverId = null;
+            }
+          }
+        } else if (metric.hostname) {
+          const server = await findServerByHostName({
             projectId: metric.projectId,
             hostname: metric.hostname,
           });
-
-          if (!server) {
+          if (server) {
+            metric.serverId = server.id;
+          } else {
             metric.serverId = await createServer({
               projectId: metric.projectId,
               hostname: metric.hostname,
             });
             logger.info(
               { hostname: metric.hostname },
-              "Auto-registered server",
+              "Auto registered server",
             );
-          } else {
-            metric.serverId = server.id;
           }
         }
 

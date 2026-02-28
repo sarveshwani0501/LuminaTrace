@@ -2,6 +2,7 @@ import createConsumer from "../consumer.js";
 import logger from "../../utils/logger.js";
 import { topics } from "../topics.js";
 import {
+  findServerById,
   findServerByHostName,
   createServer,
 } from "../../modules/servers/serverRepository.js";
@@ -35,23 +36,54 @@ export async function startLogsWorker() {
           "Log is being Processed",
         );
 
-        if (!log.serverId && log.hostname) {
-          const projectId = log.projectId;
-          const hostname = log.hostname;
-          // if serverId is null
-          // we find by hostname if we can get the server details
-          let server = await findServerByHostName({
-            projectId,
-            hostname,
-          });
-
+        if (log.serverId) {
+          const server = await findServerById({ serverId: log.serverId });
           if (!server) {
-            log.serverId = await createServer({ projectId, hostname });
-            logger.info({ hostname: hostname }, "Auto registered server");
-          } else {
+            if (log.hostname) {
+              logger.warn(
+                { serverId: log.serverId, hostname: log.hostname },
+                "ServerId not found, using hostname instead",
+              );
+              const serverByHost = await findServerByHostName({
+                projectId: log.projectId,
+                hostname: log.hostname,
+              });
+              if (serverByHost) {
+                log.serverId = serverByHost.id;
+              } else {
+                log.serverId = await createServer({
+                  projectId: log.projectId,
+                  hostname: log.hostname,
+                });
+                logger.info(
+                  { hostname: log.hostname },
+                  "Auto registered server",
+                );
+              }
+            } else {
+              logger.warn(
+                { serverId: log.serverId },
+                "ServerId not found and no hostname provided, setting serverId to null",
+              );
+              log.serverId = null;
+            }
+          }
+        } else if (log.hostname) {
+          const server = await findServerByHostName({
+            projectId: log.projectId,
+            hostname: log.hostname,
+          });
+          if (server) {
             log.serverId = server.id;
+          } else {
+            log.serverId = await createServer({
+              projectId: log.projectId,
+              hostname: log.hostname,
+            });
+            logger.info({ hostname: log.hostname }, "Auto registered server");
           }
         }
+       
 
         await logRepo.insertLog(log);
 
