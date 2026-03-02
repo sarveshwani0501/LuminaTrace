@@ -68,30 +68,37 @@ export async function getLogs(projectId, filters = {}) {
   try {
     const { from, to, level, serverId, limit = 100, offset = 0 } = filters;
 
-    let query = `SELECT * FROM logs WHERE project_id = $1`;
+    let query = `SELECT 
+      logs.*,
+      servers.name as server_name,
+      servers.hostname as server_hostname,
+      servers.environment as server_environment
+    FROM logs
+    LEFT JOIN servers ON logs.server_id = servers.id
+    WHERE logs.project_id = $1`;
     const values = [projectId];
 
     if (from) {
       values.push(from);
-      query += ` AND time >= $${values.length}`;
+      query += ` AND logs.time >= $${values.length}`;
     }
 
     if (to) {
       values.push(to);
-      query += ` AND time <= $${values.length}`;
+      query += ` AND logs.time <= $${values.length}`;
     }
 
     if (level) {
       values.push(level);
-      query += ` AND level = $${values.length}`;
+      query += ` AND logs.level = $${values.length}`;
     }
 
     if (serverId) {
       values.push(serverId);
-      query += ` AND server_id = $${values.length}`;
+      query += ` AND logs.server_id = $${values.length}`;
     }
 
-    query += ` ORDER BY time DESC`;
+    query += ` ORDER BY logs.time DESC`;
 
     values.push(limit);
     query += ` LIMIT $${values.length}`;
@@ -177,7 +184,7 @@ export async function getStatsFromRedis(projectId) {
     const key = `stats:${projectId}:today`;
     const stats = await getHash(key);
 
-    if (!stats) {
+    if (!stats || Object.keys(stats).length === 0) {
       return {
         total_requests: 0,
         error_count: 0,

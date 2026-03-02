@@ -9,6 +9,8 @@ const projectAllSchema = {
     description: { type: "string" },
     retention_days: { type: "number" },
     created_by: uuidSchema,
+    created_by_name: { type: "string" },
+    created_by_email: { type: "string" },
     created_at: { type: "string" },
   },
 };
@@ -23,6 +25,8 @@ const projectSchema = {
     retention_days: { type: "number" },
     created_at: { type: "string" },
     created_by: uuidSchema,
+    created_by_name: { type: "string" },
+    created_by_email: { type: "string" },
     api_key_preview: { type: "string" },
   },
 };

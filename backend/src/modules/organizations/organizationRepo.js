@@ -80,10 +80,19 @@ export async function getPendingInvites(orgId, email) {
 
 export async function getOrganizationInvites(orgId) {
   const result = await pool.query(
-    `SELECT id, email, role, invited_by, expires_at, created_at 
+    `SELECT 
+      org_invites.id, 
+      org_invites.email, 
+      org_invites.role, 
+      org_invites.invited_by, 
+      org_invites.expires_at, 
+      org_invites.created_at,
+      users.full_name as invited_by_name,
+      users.email as invited_by_email
      FROM org_invites 
-     WHERE organization_id = $1 AND accepted_at IS NULL AND expires_at > NOW()
-     ORDER BY created_at DESC`,
+     LEFT JOIN users ON org_invites.invited_by = users.id
+     WHERE org_invites.organization_id = $1 AND org_invites.accepted_at IS NULL AND org_invites.expires_at > NOW()
+     ORDER BY org_invites.created_at DESC`,
     [orgId],
   );
   return result.rows;

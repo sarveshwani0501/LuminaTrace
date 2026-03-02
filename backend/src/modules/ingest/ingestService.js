@@ -32,6 +32,7 @@ export function enrichLog(log, projectId) {
     projectId: projectId,
     timestamp: log.timestamp,
     serverId: log.serverId || null,
+    hostname: log.hostname || null,
     level: log.level,
     message: log.message,
     traceId: log.traceId || null,
@@ -48,6 +49,7 @@ export function enrichMetrics(metricData, projectId) {
     value: metricData.value,
     unit: metricData.unit,
     serverId: metricData.serverId || null,
+    hostname: log.hostname || null,
     tags: metricData.tags || {},
   };
 }

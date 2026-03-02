@@ -105,6 +105,8 @@ const pendingInvitesSchema = {
           email: { type: "string", format: "email" },
           role: { type: "string", enum: ["owner", "member"] },
           invited_by: uuidSchema,
+          invited_by_name: { type: "string" },
+          invited_by_email: { type: "string" },
           expires_at: { type: "string" },
           created_at: { type: "string" },
         },

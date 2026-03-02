@@ -1,45 +1,5 @@
 import * as logRepo from "./logsRepository.js";
-
-function getIntervalForWindow(timeRange) {
-  const intervals = {
-    "30m": "5 minutes",
-    "1h": "5 minutes",
-    "6h": "15 minutes",
-    "24h": "1 hour",
-    "7d": "6 hours",
-    "30d": "1 day",
-  };
-
-  return intervals[timeRange] || "1 hour";
-}
-
-function parseTimeRange(timeRange) {
-  const now = new Date();
-
-  const durations = {
-    "30m": 30 * 60 * 1000,
-    "1h": 60 * 60 * 1000,
-    "6h": 6 * 60 * 60 * 1000,
-    "24h": 24 * 60 * 60 * 1000,
-    "7d": 7 * 24 * 60 * 60 * 1000,
-    "30d": 30 * 24 * 60 * 60 * 1000,
-  };
-
-  const duration = durations[timeRange];
-
-  if (!duration) {
-    throw new Error(`Invalid timeRange: ${timeRange}`);
-  }
-
-  const from = new Date(now.getTime() - duration);
-
-  const to = now;
-
-  return {
-    from: from.toISOString(),
-    to: to.toISOString(),
-  };
-}
+import {getIntervalForWindow, parseTimeRange} from "../../utils/timeWindow.js"
 
 // GET  /logs?projectId=X&timerange=1h&level=ERROR&serverId=Y&limit=100&offset=0
 // GET  /logs/recent?projectId=X&limit=100
@@ -53,7 +13,6 @@ export async function getLogs(projectId, filters) {
 
   const { timerange, level, serverId, limit, offset } = filters;
 
-  // Default to 1h if no timeRange provided
   const timeRange = timerange || "1h";
   const { from, to } = parseTimeRange(timeRange);
 

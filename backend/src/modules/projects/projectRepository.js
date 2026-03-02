@@ -16,7 +16,19 @@ import { pool } from "../../config/database.js";
 
 export async function getAll(orgId) {
   const res = await pool.query(
-    `SELECT id, name, slug, description, retention_days, created_at, created_by FROM projects WHERE organization_id = $1`,
+    `SELECT 
+      projects.id, 
+      projects.name, 
+      projects.slug, 
+      projects.description, 
+      projects.retention_days, 
+      projects.created_at, 
+      projects.created_by,
+      users.full_name as created_by_name,
+      users.email as created_by_email
+    FROM projects
+    LEFT JOIN users ON projects.created_by = users.id
+    WHERE projects.organization_id = $1`,
     [orgId],
   );
 
@@ -33,7 +45,20 @@ export async function doesProjectNameExists(orgId, name) {
 
 export async function getProjectById(orgId, projectId) {
   const res = await pool.query(
-    `SELECT id, name, slug, description, retention_days, created_at, created_by, api_key_preview FROM projects WHERE id = $1 AND organization_id = $2`,
+    `SELECT 
+      projects.id, 
+      projects.name, 
+      projects.slug, 
+      projects.description, 
+      projects.retention_days, 
+      projects.created_at, 
+      projects.created_by, 
+      projects.api_key_preview,
+      users.full_name as created_by_name,
+      users.email as created_by_email
+    FROM projects
+    LEFT JOIN users ON projects.created_by = users.id
+    WHERE projects.id = $1 AND projects.organization_id = $2`,
     [projectId, orgId],
   );
   return res.rows[0];
