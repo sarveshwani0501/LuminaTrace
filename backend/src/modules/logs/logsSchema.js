@@ -6,7 +6,7 @@ export const allLogsSchema = {
     required: ["projectId"],
     properties: {
       projectId: uuidSchema,
-      timeRange: {
+      timerange: {
         type: "string",
         enum: ["30m", "1h", "6h", "24h", "7d", "30d"],
       },
@@ -105,7 +105,7 @@ export const topRoutesSchema = {
     required: ["projectId"],
     properties: {
       projectId: uuidSchema,
-      timeRange: {
+      timerange: {
         type: "string",
         enum: ["30m", "1h", "6h", "24h", "7d", "30d"],
       },
@@ -142,10 +142,10 @@ export const topRoutesSchema = {
 export const logsVolumeSchema = {
   querystring: {
     type: "object",
-    required: ["projectId", "timeRange"],
+    required: ["projectId"],
     properties: {
       projectId: uuidSchema,
-      timeRange: {
+      timerange: {
         type: "string",
         enum: ["30m", "1h", "6h", "24h", "7d", "30d"],
       },
@@ -167,6 +167,8 @@ export const logsVolumeSchema = {
           },
         },
         interval: { type: "string" },
+        from: { type: "string" },
+        to: { type: "string" },
       },
     },
   },
@@ -175,10 +177,10 @@ export const logsVolumeSchema = {
 export const errorRateSchema = {
   querystring: {
     type: "object",
-    required: ["projectId", "timeRange"],
+    required: ["projectId"],
     properties: {
       projectId: uuidSchema,
-      timeRange: {
+      timerange: {
         type: "string",
         enum: ["30m", "1h", "6h", "24h", "7d", "30d"],
       },
@@ -202,6 +204,8 @@ export const errorRateSchema = {
           },
         },
         interval: { type: "string" },
+        from: { type: "string" },
+        to: { type: "string" },
       },
     },
   },

@@ -1,14 +1,16 @@
 import * as logRepo from "./logsRepository.js";
 
 function getIntervalForWindow(timeRange) {
-  if (timeRange === "30m" || timeRange === "1h") return "1 minute";
-  if (timeRange === "6h") return "5 minutes";
+  const intervals = {
+    "30m": "5 minutes",
+    "1h": "5 minutes",
+    "6h": "15 minutes",
+    "24h": "1 hour",
+    "7d": "6 hours",
+    "30d": "1 day",
+  };
 
-  if (timeRange === "24h") return "15 minutes";
-
-  if (timeRange === "7d") return "2 hours";
-
-  return "6 hours";
+  return intervals[timeRange] || "1 hour";
 }
 
 function parseTimeRange(timeRange) {
@@ -46,96 +48,103 @@ function parseTimeRange(timeRange) {
 
 export async function getLogs(projectId, filters) {
   if (!projectId) {
-    throw {
-      statusCode: 404,
-      message: "Project not found",
-    };
+    throw new Error("Project ID is required");
   }
+
   const { timerange, level, serverId, limit, offset } = filters;
 
-  const { from, to } = parseTimeRange(timerange);
+  // Default to 1h if no timeRange provided
+  const timeRange = timerange || "1h";
+  const { from, to } = parseTimeRange(timeRange);
 
-  const res = await logRepo.getLogs(projectId, {
+  const logs = await logRepo.getLogs(projectId, {
     from,
     to,
-    level,
-    serverId,
+    level: level || null,
+    serverId: serverId || null,
     limit,
     offset,
   });
 
-  return res;
+  const total = await logRepo.getLogCount(projectId, {
+    from,
+    to,
+    level: level || null,
+    serverId: serverId || null,
+  });
+
+  return { logs, total, limit, offset };
 }
 
 export async function getRecentLogs(projectId, limit) {
   if (!projectId) {
-    throw {
-      statusCode: 404,
-      message: "Project not found",
-    };
+    throw new Error("Project ID is required");
   }
-  const res = await logRepo.getRecentLogsFromRedis(projectId, limit);
+  const logs = await logRepo.getRecentLogsFromRedis(projectId, limit);
 
-  return res;
+  return { logs };
 }
 
 export async function getStats(projectId) {
   if (!projectId) {
-    throw {
-      statusCode: 404,
-      message: "Project not found",
-    };
+    throw new Error("Project ID is required");
   }
-  const res = await logRepo.getStatsFromRedis(projectId);
+  const stats = await logRepo.getStatsFromRedis(projectId);
 
-  return res;
+  return stats;
 }
 
-export async function getTopRoutesHandler(projectId, timeRange, limit, sortBy) {
+export async function getTopRoutesHandler(
+  projectId,
+  timeRange,
+  limit = 10,
+  sortBy = "count",
+) {
   if (!projectId) {
-    throw {
-      statusCode: 404,
-      message: "Project not found",
-    };
+    throw new Error("Project ID is required");
   }
-  const { from, to } = parseTimeRange(timeRange);
-  const res = await logRepo.getTopRoutes(projectId, from, to, limit, sortBy);
-  return res;
+
+  const range = timeRange || "24h";
+  const { from, to } = parseTimeRange(range);
+  const routes = await logRepo.getTopRoutes(projectId, from, to, limit, sortBy);
+
+  return { routes };
 }
 
 export async function getErrorRateOverTime(projectId, timeRange) {
   if (!projectId) {
-    throw {
-      statusCode: 404,
-      message: "Project not found",
-    };
+    throw new Error("Project ID is required");
   }
-  const { from, to } = parseTimeRange(timeRange);
 
-  const windowDuration = getIntervalForWindow(timeRange);
+  const range = timeRange || "1h";
+  const { from, to } = parseTimeRange(range);
+  const interval = getIntervalForWindow(range);
 
-  const res = await logRepo.getErrorRateOverTime(
+  const data = await logRepo.getErrorRateOverTime(
     projectId,
-    windowDuration,
+    interval,
     from,
     to,
   );
+
+  return { data, interval, from, to };
 }
 
 export async function getLogVolume(projectId, timeRange) {
   if (!projectId) {
-    throw {
-      statusCode: 404,
-      message: "Project not found",
-    };
+    throw new Error("Project ID is required");
   }
 
-  const { from, to } = parseTimeRange(timeRange);
+  const range = timeRange || "1h";
+  const { from, to } = parseTimeRange(range);
+  const interval = getIntervalForWindow(range);
 
-  const interval = getIntervalForWindow(timeRange);
+  const data = await logRepo.getLogVolumeOverTime(
+    projectId,
+    interval,
+    from,
+    to,
+  );
 
-  const res = await logRepo.getLogVolumeOverTime(projectId, interval, from, to);
+  return { data, interval, from, to };
 }
-
-
-

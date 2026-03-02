@@ -65,93 +65,146 @@ export async function insertLogBatch(logs) {
 // GET  /logs/routes?projectId=X&window=1h
 
 export async function getLogs(projectId, filters = {}) {
-  const { from, to, level, serverId, limit = 100, offset = 0 } = filters;
+  try {
+    const { from, to, level, serverId, limit = 100, offset = 0 } = filters;
 
-  let query = `SELECT * FROM logs WHERE project_id = $1`;
-  const values = [projectId];
+    let query = `SELECT * FROM logs WHERE project_id = $1`;
+    const values = [projectId];
 
-  if (from) {
-    values.push(from);
-    query += ` AND time >= $${values.length}`;
+    if (from) {
+      values.push(from);
+      query += ` AND time >= $${values.length}`;
+    }
+
+    if (to) {
+      values.push(to);
+      query += ` AND time <= $${values.length}`;
+    }
+
+    if (level) {
+      values.push(level);
+      query += ` AND level = $${values.length}`;
+    }
+
+    if (serverId) {
+      values.push(serverId);
+      query += ` AND server_id = $${values.length}`;
+    }
+
+    query += ` ORDER BY time DESC`;
+
+    values.push(limit);
+    query += ` LIMIT $${values.length}`;
+
+    values.push(offset);
+    query += ` OFFSET $${values.length}`;
+
+    const res = await pool.query(query, values);
+
+    return res.rows || [];
+  } catch (error) {
+    console.error("Error fetching logs:", error);
+    throw new Error(`Failed to fetch logs: ${error.message}`);
   }
-
-  if (to) {
-    values.push(to);
-    query += ` AND time <= $${values.length}`;
-  }
-
-  if (level) {
-    values.push(level);
-    query += ` AND level = $${values.length}`;
-  }
-
-  if (serverId) {
-    values.push(serverId);
-    query += ` AND server_id = $${values.length}`;
-  }
-
-  query += ` ORDER BY time DESC`;
-
-  values.push(limit);
-  query += ` LIMIT $${values.length}`;
-
-  values.push(offset);
-  query += ` OFFSET $${values.length}`;
-
-  const res = await pool.query(query, values);
-
-  return res.rows;
 }
 
 export async function getLogCount(projectId, filters = {}) {
-  const { from, to, level, serverId } = filters;
-  let query = `SELECT COUNT(*) as count FROM logs WHERE project_id = $1`;
-  const values = [projectId];
+  try {
+    const { from, to, level, serverId } = filters;
+    let query = `SELECT COUNT(*) as count FROM logs WHERE project_id = $1`;
+    const values = [projectId];
 
-  if (from) {
-    values.push(from);
-    query += ` AND time >= $${values.length}`;
+    if (from) {
+      values.push(from);
+      query += ` AND time >= $${values.length}`;
+    }
+
+    if (to) {
+      values.push(to);
+      query += ` AND time <= $${values.length}`;
+    }
+
+    if (level) {
+      values.push(level);
+      query += ` AND level = $${values.length}`;
+    }
+
+    if (serverId) {
+      values.push(serverId);
+      query += ` AND server_id = $${values.length}`;
+    }
+
+    const res = await pool.query(query, values);
+
+    if (res.rows && res.rows.length > 0) {
+      return parseInt(res.rows[0].count, 10);
+    }
+    return 0;
+  } catch (error) {
+    console.error("Error getting log count:", error);
+    return 0;
   }
-
-  if (to) {
-    values.push(to);
-    query += ` AND time <= $${values.length}`;
-  }
-
-  if (level) {
-    values.push(level);
-    query += ` AND level = $${values.length}`;
-  }
-
-  if (serverId) {
-    values.push(serverId);
-    query += ` AND server_id = $${values.length}`;
-  }
-
-  const res = await pool.query(query, values);
-  return parseInt(res.rows[0].count, 10);
 }
 
 export async function getRecentLogsFromRedis(projectId, limit = 100) {
-  const key = `recent_logs:${projectId}`;
-  const items = await getListItems(key, 0, limit - 1);
+  try {
+    const key = `recent_logs:${projectId}`;
+    const items = await getListItems(key, 0, limit - 1);
 
-  return items.map((item) => JSON.parse(item));
+    if (!items || items.length === 0) {
+      return [];
+    }
+
+    const parsedLogs = [];
+    for (const item of items) {
+      try {
+        const log = JSON.parse(item);
+        parsedLogs.push(log);
+      } catch (err) {
+        console.error("Failed to parse log item:", err);
+      }
+    }
+
+    return parsedLogs;
+  } catch (error) {
+    console.error("Error fetching recent logs from Redis:", error);
+    return [];
+  }
 }
 
 export async function getStatsFromRedis(projectId) {
-  const key = `stats:${projectId}:today`;
-  const stats = await getHash(key);
-  return {
-    total_requests: parseInt(stats.total_requests || 0, 10),
-    error_count: parseInt(stats.error_count || 0, 10),
-    warn_count: parseInt(stats.warn_count || 0, 10),
-    latency_sum: parseFloat(stats.latency_sum || 0),
-    latency_count: parseInt(stats.latency_count || 0, 10),
-  };
-}
+  try {
+    const key = `stats:${projectId}:today`;
+    const stats = await getHash(key);
 
-// later scope
+    if (!stats) {
+      return {
+        total_requests: 0,
+        error_count: 0,
+        warn_count: 0,
+        latency_sum: 0,
+        latency_count: 0,
+      };
+    }
+
+    return {
+      total_requests: parseInt(stats.total_requests || 0, 10),
+      error_count: parseInt(stats.error_count || 0, 10),
+      warn_count: parseInt(stats.warn_count || 0, 10),
+      latency_sum: parseFloat(stats.latency_sum || 0),
+      latency_count: parseInt(stats.latency_count || 0, 10),
+    };
+  } catch (error) {
+    console.error("Error fetching stats from Redis:", error);
+    return {
+      total_requests: 0,
+      error_count: 0,
+      warn_count: 0,
+      latency_sum: 0,
+      latency_count: 0,
+    };
+  }
+}
 
 export async function getTopRoutes(
   projectId,
@@ -160,15 +213,16 @@ export async function getTopRoutes(
   limit,
   sortBy = "count",
 ) {
-  const validSorts = {
-    count: "request_count",
-    errors: "error_count",
-    error: "error_rate",
-  };
+  try {
+    const validSorts = {
+      count: "request_count",
+      errors: "error_count",
+      error_rate: "error_rate",
+    };
 
-  const orderBy = validSorts[sortBy] || "request_count";
+    const orderBy = validSorts[sortBy] || "request_count";
 
-  const query = `
+    const query = `
   SELECT
   metadata->>'route' AS route,
   metadata->>'method' AS method,
@@ -185,14 +239,21 @@ export async function getTopRoutes(
   LIMIT $4
   `;
 
-  const res = await pool.query(query, [projectId, from, to, limit]);
-  return res.rows;
+    const res = await pool.query(query, [projectId, from, to, limit]);
+    return res.rows || [];
+  } catch (error) {
+    console.error("Error fetching top routes:", error);
+    throw new Error(`Failed to fetch top routes: ${error.message}`);
+  }
 }
 
-
-
 export async function getLogVolumeOverTime(projectId, interval, from, to) {
-  const query = `SELECT time_bucket($1, time) AS time_bucket,
+  try {
+    if (!interval) {
+      throw new Error("Interval is required for log volume query");
+    }
+
+    const query = `SELECT time_bucket($1, time) AS time_bucket,
   COUNT(*) AS log_count
   FROM logs
   WHERE project_id = $2
@@ -201,12 +262,21 @@ export async function getLogVolumeOverTime(projectId, interval, from, to) {
   GROUP BY time_bucket
   ORDER BY time_bucket DESC`;
 
-  const res = await pool.query(query, [interval, projectId, from, to]);
-  return res.rows;
+    const res = await pool.query(query, [interval, projectId, from, to]);
+    return res.rows || [];
+  } catch (error) {
+    console.error("Error fetching log volume over time:", error);
+    throw new Error(`Failed to fetch log volume: ${error.message}`);
+  }
 }
 
 export async function getErrorRateOverTime(projectId, interval, from, to) {
-  const query = `
+  try {
+    if (!interval) {
+      throw new Error("Interval is required for error rate query");
+    }
+
+    const query = `
   SELECT 
     time_bucket($1, time) AS bucket,
     COUNT(*) as total_logs,
@@ -220,6 +290,10 @@ export async function getErrorRateOverTime(projectId, interval, from, to) {
   ORDER BY bucket ASC
   `;
 
-  const res = await pool.query(query, [interval, projectId, from, to]);
-  return res.rows;
+    const res = await pool.query(query, [interval, projectId, from, to]);
+    return res.rows || [];
+  } catch (error) {
+    console.error("Error fetching error rate over time:", error);
+    throw new Error(`Failed to fetch error rate: ${error.message}`);
+  }
 }
