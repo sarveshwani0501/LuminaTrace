@@ -171,7 +171,7 @@ export async function getRecentLogsFromRedis(projectId, limit = 100) {
         console.error("Failed to parse log item:", err);
       }
     }
-
+    //console.log("Parsed Logs: ", parsedLogs);
     return parsedLogs;
   } catch (error) {
     console.error("Error fetching recent logs from Redis:", error);

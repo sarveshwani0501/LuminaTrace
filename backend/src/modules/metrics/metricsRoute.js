@@ -1,5 +1,5 @@
 import authenticate from "../../middlewares/authenticate.js";
-import authorise from "../../middlewares/authorise.js";
+import authoriseProject from "../../middlewares/authoriseProject.js";
 import * as metricsController from "./metricsController.js";
 import {
   metricsTimeseriesSchema,
@@ -10,7 +10,7 @@ export default function metricRoute(fastify) {
     "/metrics/timeseries",
     {
       schema: metricsTimeseriesSchema,
-      preHandler: [authenticate, authorise("member")],
+      preHandler: [authenticate, authoriseProject("member")],
     },
     metricsController.getTimeSeriesData,
   );
@@ -19,7 +19,7 @@ export default function metricRoute(fastify) {
     "/metrics/latest",
     {
       schema: latestMetricsSchema,
-      preHandler: [authenticate, authorise("member")],
+      preHandler: [authenticate, authoriseProject("member")],
     },
     metricsController.getLatestMetricData,
   );

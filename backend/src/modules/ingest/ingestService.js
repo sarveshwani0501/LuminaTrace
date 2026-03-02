@@ -49,7 +49,7 @@ export function enrichMetrics(metricData, projectId) {
     value: metricData.value,
     unit: metricData.unit,
     serverId: metricData.serverId || null,
-    hostname: log.hostname || null,
+    hostname: metricData.hostname || null,
     tags: metricData.tags || {},
   };
 }

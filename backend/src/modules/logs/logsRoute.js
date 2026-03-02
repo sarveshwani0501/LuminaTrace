@@ -7,7 +7,7 @@ import {
   logsVolumeSchema,
   errorRateSchema,
 } from "./logsSchema.js";
-import authorise from "../../middlewares/authorise.js";
+import authoriseProject from "../../middlewares/authoriseProject.js";
 import authenticate from "../../middlewares/authenticate.js";
 
 // GET  /logs?projectId=X&timerange=1h&level=ERROR&serverId=Y&limit=100&offset=0
@@ -22,61 +22,52 @@ export default async function logsRoute(fastify) {
     "/logs",
     {
       schema: allLogsSchema,
-      preHandler: [authenticate, authorise("member")],
+      preHandler: [authenticate, authoriseProject("member")],
     },
     logController.getAllLogs,
   );
 
-
-
-  fastify.get("/logs/recent", {
-    schema: recentLogsSchema,
-    preHandler: [authenticate, authorise("member")],
-  }, 
-  logController.getRecentLogs
-);
-
-
+  fastify.get(
+    "/logs/recent",
+    {
+      schema: recentLogsSchema,
+      preHandler: [authenticate, authoriseProject("member")],
+    },
+    logController.getRecentLogs,
+  );
 
   fastify.get(
     "/logs/stats",
     {
       schema: statsSchema,
-      preHandler: [authenticate, authorise("member")],
+      preHandler: [authenticate, authoriseProject("member")],
     },
     logController.getLogsStats,
   );
-
-
-
 
   fastify.get(
     "/logs/routes",
     {
       schema: topRoutesSchema,
-      preHandler: [authenticate, authorise("member")],
+      preHandler: [authenticate, authoriseProject("member")],
     },
     logController.getTopRoutes,
   );
-
-
 
   fastify.get(
     "/logs/volume",
     {
       schema: logsVolumeSchema,
-      preHandler: [authenticate, authorise("member")],
+      preHandler: [authenticate, authoriseProject("member")],
     },
     logController.getLogsVolume,
   );
-
-  
 
   fastify.get(
     "/logs/error",
     {
       schema: errorRateSchema,
-      preHandler: [authenticate, authorise("member")],
+      preHandler: [authenticate, authoriseProject("member")],
     },
     logController.getErrorRate,
   );
