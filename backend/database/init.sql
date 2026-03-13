@@ -131,9 +131,12 @@ CREATE TABLE alert_rules (
 -- Alert Events
 -- Records the alerts that are sent through emails
 
+-- Need to add server id here 
+
 CREATE TABLE alert_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     alert_rule_id UUID NOT NULL REFERENCES alert_rules(id) ON DELETE CASCADE,
+    server_id UUID REFERENCES servers(id),
     triggered_at TIMESTAMPTZ DEFAULT NOW(),
     resolved_at TIMESTAMPTZ,
     triggered_value DOUBLE PRECISION NOT NULL,
@@ -181,4 +184,9 @@ CREATE INDEX idx_org_invites_token
 
 CREATE INDEX idx_org_invites_email
     ON org_invites (organization_id, email);
+
+
+CREATE INDEX idx_alert_events_rule_server_status 
+ON alert_events (alert_rule_id, server_id, status)
+WHERE resolved_at IS NULL;
 
