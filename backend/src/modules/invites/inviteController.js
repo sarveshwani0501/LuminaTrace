@@ -44,7 +44,7 @@ export async function acceptAsExistingUser(req, reply) {
 
   reply.setAuthCookie(jwtToken);
 
-  reply.code(200).send({
+  return reply.code(200).send({
     user,
     organization,
   });

@@ -11,6 +11,17 @@
 import crypto from "crypto";
 import * as organizationRepo from "./organizationRepo.js";
 import { slugify } from "../../utils/slugify.js";
+import nodemailer from "nodemailer";
+import config from "../../config/index.js";
+
+const transporter = nodemailer.createTransport({
+  host: config.smtp?.host || "smtp.ethereal.email",
+  port: config.smtp?.port || 587,
+  auth: {
+    user: config.smtp?.user || "dummy",
+    pass: config.smtp?.pass || "dummy",
+  },
+});
 
 export async function organizationDetails(orgId) {
   const org = await organizationRepo.getOrganizationDetails(orgId);
@@ -94,6 +105,25 @@ export async function createInvite(orgId, email, role, invitedBy) {
   });
 
   const inviteLink = `http://localhost:5173/signup/invite/${token}`;
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"LuminaTrace" <${config.smtp?.from || "no-reply@luminatrace.com"}>`,
+      to: email,
+      subject: "You've been invited to join an organization on LuminaTrace",
+      html: `
+        <h2>LuminaTrace Invitation</h2>
+        <p>You have been invited to join an organization on LuminaTrace.</p>
+        <p>Please click the link below to accept the invitation and join the organization:</p>
+        <a href="${inviteLink}">${inviteLink}</a>
+        <p>This invite will expire in 7 days.</p>
+      `,
+    });
+    console.log("Invite email sent successfully: %s", info.messageId);
+  } catch (error) {
+    console.error("Failed to send invite email", error);
+    // Optionally: if we strictly require the email to go out for safety, you can throw here. Assumed safe fallback is just logging.
+  }
 
   return { invite, inviteLink };
 }
