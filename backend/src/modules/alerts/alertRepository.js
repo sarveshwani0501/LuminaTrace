@@ -3,8 +3,10 @@ import { pool } from "../../config/database.js";
 // POST   /projects/:projectId/alerts        → Create a rule
 // GET    /projects/:projectId/alerts        → List all rules
 // GET    /projects/:projectId/alerts/:id    → Get one rule
-// PUT    /projects/:projectId/alerts/:id    → Update a rule
+// PATCH    /projects/:projectId/alerts/:id    → Update a rule
 // DELETE /projects/:projectId/alerts/:id    → Delete a rule
+// PATCH  /projects/:projectId/alerts/:id/toggle -> Toggle activeness of rule
+// GET /projects/:projectId/alerts/:id/events  → List all times this alert fired
 
 // CREATE TABLE alert_rules (
 //     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -121,7 +123,7 @@ export async function getActiveRules(projectId, metricName) {
 
 export async function getActiveEvent(ruleId, serverId) {
   const res = await pool.query(
-    `SELECT * FROM alert_events WHERE alert_rule_id = $1 AND server_id = $2 AND status = 'firing' AND resolved_at = NULL`,
+    `SELECT * FROM alert_events WHERE alert_rule_id = $1 AND server_id = $2 AND status = 'firing' AND resolved_at IS NULL`,
     [ruleId, serverId],
   );
 
@@ -139,7 +141,7 @@ export async function createAlertEvent(ruleId, serverId, triggeredValue) {
 
 export async function resolveEvent(ruleId, serverId) {
   const res = await pool.query(
-    `UPDATE alert_events SET status = 'resolved', resolved_at = NOW() WHERE alert_rule_id = $1 AND server_id = $2 RETURNING *`,
+    `UPDATE alert_events SET status = 'resolved', resolved_at = NOW() WHERE alert_rule_id = $1 AND server_id = $2 AND status = 'firing' AND resolved_at IS NULL RETURNING *`,
     [ruleId, serverId],
   );
 
@@ -173,7 +175,7 @@ export async function getEventsByProjectId(projectId, filters) {
     ar.notification_email,
     s.name AS server_name,
     s.hostname AS server_hostname,
-    s.environment AS server_environment,
+    s.environment AS server_environment
     FROM alert_events ae
     JOIN alert_rules ar ON ae.alert_rule_id = ar.id
     LEFT JOIN servers s ON ae.server_id = s.id
@@ -200,19 +202,5 @@ export async function getEventsByProjectId(projectId, filters) {
   query += ` OFFSET $${values.length}`;
 
   const res = await pool.query(query, values);
-
   return res.rows;
 }
-
-// CREATE TABLE alert_events (
-//     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-//     alert_rule_id UUID NOT NULL REFERENCES alert_rules(id) ON DELETE CASCADE,
-//     server_id UUID REFERENCES servers(id),
-//     triggered_at TIMESTAMPTZ DEFAULT NOW(),
-//     resolved_at TIMESTAMPTZ,
-//     triggered_value DOUBLE PRECISION NOT NULL,
-//     status VARCHAR(20) DEFAULT 'firing',
-//     notification_sent_at TIMESTAMPTZ
-// );
-
-// checking all alert events by projectid
