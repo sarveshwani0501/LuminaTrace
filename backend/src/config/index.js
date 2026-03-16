@@ -105,6 +105,13 @@ const config = {
     enableTracing: getEnvVar("ENABLE_TRACING", "true") === "true",
     enableAlerts: getEnvVar("ENABLE_ALERTS", "true") === "true",
   },
+  smtp: {
+    host: getEnvVar("SMTP_HOST", "smtp.gmail.com"),
+    port: getEnvInt("SMTP_PORT", 587),
+    user: getEnvVar("SMTP_EMAIL", ""),
+    pass: getEnvVar("SMTP_PASSWORD", ""),
+    from: getEnvVar("SMTP_EMAIL", ""),
+  },
 };
 
 /**
