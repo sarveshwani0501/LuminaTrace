@@ -9,6 +9,7 @@ import {
 import logger from "../../utils/logger.js";
 import redis, { incrementHashField } from "../../config/redis.js";
 import { insertMetric } from "../../modules/metrics/metricsRepository.js";
+import * as alertsService from "../../modules/alerts/alertService.js";
 
 export async function startMetricsWorker() {
   const consumer = createConsumer("metrics-worker");
@@ -29,6 +30,8 @@ export async function startMetricsWorker() {
           "Processing metric",
         );
 
+        let serverName = null;
+
         if (metric.serverId) {
           const server = await findServerById({ serverId: metric.serverId });
           if (!server) {
@@ -43,11 +46,13 @@ export async function startMetricsWorker() {
               });
               if (serverByHost) {
                 metric.serverId = serverByHost.id;
+                serverName = serverByHost.name;
               } else {
                 metric.serverId = await createServer({
                   projectId: metric.projectId,
                   hostname: metric.hostname,
                 });
+                serverName = metric.hostname;
                 logger.info(
                   { hostname: metric.hostname },
                   "Auto registered server",
@@ -68,11 +73,13 @@ export async function startMetricsWorker() {
           });
           if (server) {
             metric.serverId = server.id;
+            serverName = server.name;
           } else {
             metric.serverId = await createServer({
               projectId: metric.projectId,
               hostname: metric.hostname,
             });
+            serverName = metric.hostname;
             logger.info(
               { hostname: metric.hostname },
               "Auto registered server",
@@ -102,6 +109,14 @@ export async function startMetricsWorker() {
 
           await redis.expire(statsKey, ttl);
         }
+
+        await alertsService.checkAndFireAlerts(
+          metric.projectId,
+          metric.name,
+          metric.value,
+          metric.serverId || null,
+          serverName || null,
+        );
 
         // socket io code
 
