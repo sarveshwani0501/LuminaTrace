@@ -11,11 +11,17 @@ import organizationRoutes from "./modules/organizations/organizationRoute.js";
 import inviteRoute from "./modules/invites/inviteRoute.js";
 import projectRoute from "./modules/projects/projectRoute.js";
 import ingestRoute from "./modules/ingest/ingestRoute.js";
+import logsRoute from "./modules/logs/logsRoute.js";
+import metricsRoute from "./modules/metrics/metricsRoute.js";
+import alertRoute from "./modules/alerts/alertRoute.js";
 import {
   connectProducer,
   disconnectProducer,
   isProducerConnected,
 } from "./kafka/producer.js";
+import { startLogsWorker } from "./kafka/workers/logsWorker.js";
+import { startMetricsWorker } from "./kafka/workers/metricsWorker.js";
+import redis from "./config/redis.js";
 
 export async function buildApp() {
   const fastify = Fastify({
@@ -52,9 +58,25 @@ export async function buildApp() {
     fastify.log.error({ error }, "Failed to connect Kafka producer");
   }
 
+  try {
+    await startLogsWorker();
+    fastify.log.info("Logs worker started successfully");
+  } catch (error) {
+    fastify.log.error({ error }, "Failed to start logs worker");
+  }
+
+  try {
+    await startMetricsWorker();
+    fastify.log.info("Metrics worker started successfully");
+  } catch (error) {
+    fastify.log.error({ error }, "Failed to start metrics worker");
+  }
+
   fastify.addHook("onClose", async () => {
     fastify.log.info("Shutting down Kafka producer...");
     await disconnectProducer();
+    fastify.log.info("Closing Redis connection...");
+    await redis.quit();
   });
 
   // Register Routes
@@ -68,12 +90,19 @@ export async function buildApp() {
 
   await fastify.register(ingestRoute);
 
+  await fastify.register(logsRoute);
+
+  await fastify.register(metricsRoute);
+
+  await fastify.register(alertRoute);
+
   fastify.get("/health", async (request, reply) => {
     const health = {
       status: "ok",
       environment: config.app.env,
       database: "disconnected",
       kafka: isProducerConnected() ? "connected" : "disconnected",
+      redis: "disconnected",
     };
 
     try {
@@ -84,7 +113,17 @@ export async function buildApp() {
       health.error = error.message;
     }
 
-    if (health.database === "disconnected") {
+    try {
+      await redis.ping();
+      health.redis = "connected";
+    } catch (error) {
+      health.status = "degraded";
+      if (!health.error) {
+        health.error = error.message;
+      }
+    }
+
+    if (health.database === "disconnected" || health.redis === "disconnected") {
       reply.code(503);
     }
 
