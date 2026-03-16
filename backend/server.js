@@ -27,3 +27,13 @@ async function start() {
 }
 
 start();
+
+const shutdown = async (signal) => {
+  fastify.log.info(`Received ${signal}. Closing server...`);
+  await fastify.close();
+  process.exit(0);
+};
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
+process.on("SIGUSR2", shutdown);
