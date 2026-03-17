@@ -163,10 +163,21 @@ CREATE TABLE uptime_checks (
     endpoint_id UUID NOT NULL REFERENCES monitored_endpoints(id) ON DELETE CASCADE,
     is_up BOOLEAN NOT NULL,
     status_code INTEGER,
-    response_time_ms DOUBLE PRECISION
+    response_time_ms DOUBLE PRECISION,
+    error_message TEXT
 );
 
 SELECT create_hypertable('uptime_checks', 'time');
+
+CREATE TABLE uptime_incidents (
+    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    endpoint_id      UUID         NOT NULL REFERENCES monitored_endpoints(id) ON DELETE CASCADE,
+    started_at       TIMESTAMPTZ  DEFAULT NOW(),
+    resolved_at      TIMESTAMPTZ,
+    status           VARCHAR(20)  DEFAULT 'open',
+    failure_count    INTEGER      DEFAULT 1,
+    last_error       TEXT
+);
 
 
 
