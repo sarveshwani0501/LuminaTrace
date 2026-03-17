@@ -1,5 +1,5 @@
 import authenticate from "../../middlewares/authenticate.js";
-import authoriseProject from "../../middlewares/authoriseProject.js";
+import authorise from "../../middlewares/authorise.js";
 import * as alertController from "./alertController.js";
 import {
   createRuleSchema,
@@ -16,7 +16,7 @@ export default function alertRoute(fastify, options, done) {
     "/alerts",
     {
       schema: createRuleSchema,
-      preHandler: [authenticate, authoriseProject("member")],
+      preHandler: [authenticate, authorise("member")],
     },
     alertController.createRule,
   );
@@ -25,7 +25,7 @@ export default function alertRoute(fastify, options, done) {
     "/alerts",
     {
       schema: getAllRulesSchema,
-      preHandler: [authenticate, authoriseProject("member")],
+      preHandler: [authenticate, authorise("member")],
     },
     alertController.listAllRules,
   );
@@ -34,7 +34,7 @@ export default function alertRoute(fastify, options, done) {
     "/alerts/:id",
     {
       schema: getRuleByIdSchema,
-      preHandler: [authenticate, authoriseProject("member")],
+      preHandler: [authenticate, authorise("member")],
     },
     alertController.getRuleById,
   );
@@ -43,7 +43,7 @@ export default function alertRoute(fastify, options, done) {
     "/alerts/:id",
     {
       schema: updateRuleSchema,
-      preHandler: [authenticate, authoriseProject("member")],
+      preHandler: [authenticate, authorise("member")],
     },
     alertController.updateRule,
   );
@@ -52,7 +52,7 @@ export default function alertRoute(fastify, options, done) {
     "/alerts/:id",
     {
       schema: deleteRuleSchema,
-      preHandler: [authenticate, authoriseProject("admin")],
+      preHandler: [authenticate, authorise("admin")],
     },
     alertController.deleteRule,
   );
@@ -61,7 +61,7 @@ export default function alertRoute(fastify, options, done) {
     "/alerts/:id/toggle",
     {
       schema: toggleStatusSchema,
-      preHandler: [authenticate, authoriseProject("member")],
+      preHandler: [authenticate, authorise("member")],
     },
     alertController.toggleRuleActivity,
   );
@@ -70,7 +70,7 @@ export default function alertRoute(fastify, options, done) {
     "/alerts/events",
     {
       schema: getAllEventsSchema,
-      preHandler: [authenticate, authoriseProject("member")],
+      preHandler: [authenticate, authorise("member")],
     },
     alertController.getAllEvents,
   );

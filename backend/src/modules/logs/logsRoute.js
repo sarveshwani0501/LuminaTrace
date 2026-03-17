@@ -7,7 +7,7 @@ import {
   logsVolumeSchema,
   errorRateSchema,
 } from "./logsSchema.js";
-import authoriseProject from "../../middlewares/authoriseProject.js";
+import authorise from "../../middlewares/authorise.js";
 import authenticate from "../../middlewares/authenticate.js";
 
 // GET  /logs?projectId=X&timerange=1h&level=ERROR&serverId=Y&limit=100&offset=0
@@ -22,7 +22,7 @@ export default async function logsRoute(fastify) {
     "/logs",
     {
       schema: allLogsSchema,
-      preHandler: [authenticate, authoriseProject("member")],
+      preHandler: [authenticate, authorise("member")],
     },
     logController.getAllLogs,
   );
@@ -31,7 +31,7 @@ export default async function logsRoute(fastify) {
     "/logs/recent",
     {
       schema: recentLogsSchema,
-      preHandler: [authenticate, authoriseProject("member")],
+      preHandler: [authenticate, authorise("member")],
     },
     logController.getRecentLogs,
   );
@@ -40,7 +40,7 @@ export default async function logsRoute(fastify) {
     "/logs/stats",
     {
       schema: statsSchema,
-      preHandler: [authenticate, authoriseProject("member")],
+      preHandler: [authenticate, authorise("member")],
     },
     logController.getLogsStats,
   );
@@ -49,7 +49,7 @@ export default async function logsRoute(fastify) {
     "/logs/routes",
     {
       schema: topRoutesSchema,
-      preHandler: [authenticate, authoriseProject("member")],
+      preHandler: [authenticate, authorise("member")],
     },
     logController.getTopRoutes,
   );
@@ -58,7 +58,7 @@ export default async function logsRoute(fastify) {
     "/logs/volume",
     {
       schema: logsVolumeSchema,
-      preHandler: [authenticate, authoriseProject("member")],
+      preHandler: [authenticate, authorise("member")],
     },
     logController.getLogsVolume,
   );
@@ -67,7 +67,7 @@ export default async function logsRoute(fastify) {
     "/logs/error",
     {
       schema: errorRateSchema,
-      preHandler: [authenticate, authoriseProject("member")],
+      preHandler: [authenticate, authorise("member")],
     },
     logController.getErrorRate,
   );

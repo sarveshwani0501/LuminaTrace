@@ -38,3 +38,33 @@ export async function createServer({ projectId, hostname }) {
   );
   return res.rows[0].id;
 }
+
+export async function getStaleServers(threshold) {
+  // stale servers to be found
+  // so those servers which sent a heartbeat before the threshold time interval
+  const res = await pool.query(
+    `SELECT * FROM servers WHERE last_seen_at < NOW() - $1`,
+    [threshold],
+  );
+  return res.rows;
+}
+
+export async function markServerOnline(serverId) {
+  const res = await pool.query(
+    `UPDATE servers SET status = 'online' WHERE id = $1 RETURNING *`,
+    [serverId],
+  );
+
+  return res.rows[0];
+}
+
+export async function markServerOffline(serverId) {
+  const res = await pool.query(
+    `UPDATE servers SET status = 'offline' WHERE id = $1 RETURNING *`,
+    [serverId],
+  );
+
+  return res.rows[0];
+}
+
+
