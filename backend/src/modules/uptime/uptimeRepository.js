@@ -1,4 +1,4 @@
-import { pool } from "../../config/database";
+import { pool } from "../../config/database.js";
 
 // CREATE TABLE monitored_endpoints (
 //     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -113,7 +113,7 @@ export async function getRecentChecks(endpointId, limit = 50) {
   return res.rows;
 }
 
-export async function getIncidents(endpointId, limit = 50) {
+export async function getIncidentHistory(endpointId, limit = 50) {
   const res = await pool.query(
     `SELECT * FROM uptime_incidents WHERE endpoint_id = $1 ORDER BY started_at DESC LIMIT $2`,
     [endpointId, limit],
@@ -151,6 +151,16 @@ export async function getAllActiveEndpoints(projectId) {
     `SELECT * FROM monitored_endpoints WHERE project_id = $1 AND is_active = true`,
     [projectId],
   );
+
+  return res.rows;
+}
+
+export async function getAllActiveEndpointsAcrossProjects() {
+  const res = await pool.query(
+    `SELECT * FROM monitored_endpoints WHERE is_active = true`,
+  );
+
+  return res.rows;
 }
 
 export async function recordCheck(endpointId, result) {
@@ -166,6 +176,7 @@ export async function recordCheck(endpointId, result) {
 export async function getActiveIncident(endpointId) {
   const res = await pool.query(
     `SELECT * FROM uptime_incidents WHERE endpoint_id = $1 AND status = 'open'`,
+    [endpointId],
   );
   return res.rows[0];
 }
@@ -182,17 +193,17 @@ export async function getActiveIncident(endpointId) {
 
 export async function createIncident(endpointId, error) {
   const res = await pool.query(
-    `INSERT INTO uptime_incidents (endpoint_id, error) VALUES ($1, $2) RETURNING *`,
+    `INSERT INTO uptime_incidents (endpoint_id, last_error) VALUES ($1, $2) RETURNING *`,
     [endpointId, error],
   );
 
   return res.rows[0];
 }
 
-export async function resolveIncident(endpointId) {
+export async function resolveIncident(incidentId) {
   const res = await pool.query(
-    `UPDATE uptime_incidents SET status = 'resolved', resolved_at = NOW() WHERE endpoint_id = $1 RETURNING *`,
-    [endpointId],
+    `UPDATE uptime_incidents SET status = 'resolved', resolved_at = NOW() WHERE id = $1 AND status = 'open' RETURNING *`,
+    [incidentId],
   );
 
   return res.rows[0];
@@ -200,7 +211,7 @@ export async function resolveIncident(endpointId) {
 
 export async function incrementFailureCount(incidentId) {
   const res = await pool.query(
-    `UPDATE uptime_incidents SET failure_count = failure_count + 1 WHERE incident_id = $1 RETURNING *`,
+    `UPDATE uptime_incidents SET failure_count = failure_count + 1 WHERE id = $1 RETURNING *`,
     [incidentId],
   );
   return res.rows[0];
@@ -214,3 +225,30 @@ export async function incrementFailureCount(incidentId) {
 //     response_time_ms DOUBLE PRECISION,
 //     error_message TEXT
 // );
+
+export async function reportUptimeCheck(data) {
+  const { endpointId, isUp, statusCode, responseTime, errorMessage } = data;
+
+  const res = await pool.query(
+    `INSERT INTO uptime_checks (time, endpoint_id, is_up, status_code, response_time_ms, error_message) VALUES (NOW(), $1, $2, $3, $4, $5) RETURNING *`,
+    [endpointId, isUp, statusCode, responseTime, errorMessage],
+  );
+
+  return res.rows[0];
+}
+
+export async function dropOldUptimeChunks() {
+  const res = await pool.query(
+    `SELECT drop_chunks('uptime_checks', INTERVAL '30 days')`,
+  );
+  return res;
+}
+
+export async function getUptimeCheckTableSize() {
+  const res = await pool.query(
+    `SELECT pg_size_pretty(pg_total_relation_size('uptime_checks')) AS size`,
+  );
+  return res.rows[0]?.size || "unknown";
+}
+
+//SELECT pg_size_pretty(pg_total_relation_size('logs'));

@@ -127,6 +127,12 @@ export const getRecentUptimesSchema = {
 };
 
 export const getIncidentHistorySchema = {
+  querystring: {
+    type: "object",
+    properties: {
+      limit: { type: "number", default: 50 },
+    },
+  },
   response: {
     200: {
       type: "object",
@@ -152,6 +158,16 @@ export const getIncidentHistorySchema = {
 };
 
 export const getUptimePercentSchema = {
+  querystring: {
+    type: "object",
+    properties: {
+      period: {
+        type: "string",
+        enum: ["1h", "6h", "24h", "7d", "30d"],
+        default: "24h",
+      },
+    },
+  },
   response: {
     200: {
       type: "object",

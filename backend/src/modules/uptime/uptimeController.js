@@ -107,8 +107,8 @@ export async function getRecentUptimes(req, reply) {
 export async function getIncidentHistory(req, reply) {
   try {
     const { endpointId } = req.params;
-
-    const res = await uptimeService.getIncidentHistory(endpointId);
+    const { limit } = req.query;
+    const res = await uptimeService.getIncidentHistory(endpointId, limit);
 
     return reply.code(200).send(res);
   } catch (error) {

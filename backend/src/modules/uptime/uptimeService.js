@@ -80,12 +80,12 @@ export async function getRecentUptimeChecks(endpointId, limit) {
   };
 }
 
-export async function getIncidentHistory(endpointId) {
+export async function getIncidentHistory(endpointId, limit) {
   if (!endpointId) {
     throw { statusCode: 400, message: "Endpoint ID is required" };
   }
 
-  const incidentHistory = await uptimeRepo.getIncidentHistory(endpointId);
+  const incidentHistory = await uptimeRepo.getIncidentHistory(endpointId, limit);
 
   return {
     incidentHistory: incidentHistory || [],
