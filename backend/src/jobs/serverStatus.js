@@ -1,12 +1,17 @@
 import cron from "node-cron";
 import * as serverRepo from "../modules/servers/serverRepository.js";
-import { checkAndFireAlerts } from "../modules/alerts/alertService.js";
 import logger from "../utils/logger.js";
 
 async function checkServerStatus() {
   try {
     // 1. Get ONLY servers that are stale AND currently marked as 'online'
     const staleServers = await serverRepo.getStaleServers("60 seconds");
+
+    if (staleServers.length === 0) {
+      return;
+    }
+
+    logger.info(`Found ${staleServers.length} stale servers`);
 
     for (const server of staleServers) {
       // 2. Mark them offline in the database so we don't keep tracking them
@@ -15,7 +20,7 @@ async function checkServerStatus() {
       logger.info(
         { serverId: server.id },
         "Server marked offline due to missed heartbeat",
-      )
+      );
     }
   } catch (error) {
     logger.error(
@@ -27,7 +32,8 @@ async function checkServerStatus() {
 
 export function scheduleServerStatusCheck() {
   // Runs at the 0th second of every minute
-  cron.schedule("* * * * *", async () => {
+  cron.schedule("*/60 * * * * *", async () => {
     await checkServerStatus();
   });
+  logger.info("Server status check scheduled (every minute)");
 }
