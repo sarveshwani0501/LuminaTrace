@@ -134,7 +134,6 @@ export async function getLatestMetricsFromRedis(projectId) {
     const key = `latest_metric:${projectId}`;
     const metrics = await getHash(key);
 
-    
     if (!metrics || Object.keys(metrics).length === 0) {
       return {};
     }
@@ -206,4 +205,18 @@ export async function getLatestMetricsFromDB(projectId, serverId = null) {
     console.error("Error fetching latest metrics from DB:", error);
     throw new Error(`Failed to fetch latest metrics: ${error.message}`);
   }
+}
+
+export async function dropOldMetricChunks() {
+  const res = await pool.query(
+    `SELECT drop_chunk('metrics', INTERVAL '90 days')`,
+  );
+  return res;
+}
+
+export async function getMetricsTableSize() {
+  const res = await pool.query(
+    `SELECT pg_size_pretty(pg_total_relation_size('metrics')) AS size`,
+  );
+  return res.rows[0]?.size || "unknown";
 }

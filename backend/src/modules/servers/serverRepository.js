@@ -42,8 +42,9 @@ export async function createServer({ projectId, hostname }) {
 export async function getStaleServers(threshold) {
   // stale servers to be found
   // so those servers which sent a heartbeat before the threshold time interval
+  // and are currently marked as 'online' or 'unknown'
   const res = await pool.query(
-    `SELECT * FROM servers WHERE last_seen_at < NOW() - $1`,
+    `SELECT * FROM servers WHERE last_seen_at < NOW() - $1::INTERVAL AND status != 'offline'`,
     [threshold],
   );
   return res.rows;
@@ -66,5 +67,3 @@ export async function markServerOffline(serverId) {
 
   return res.rows[0];
 }
-
-

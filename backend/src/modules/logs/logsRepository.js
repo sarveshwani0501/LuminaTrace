@@ -304,3 +304,15 @@ export async function getErrorRateOverTime(projectId, interval, from, to) {
     throw new Error(`Failed to fetch error rate: ${error.message}`);
   }
 }
+
+export async function dropOldLogChunks() {
+  const res = await pool.query(`SELECT drop_chunk('logs', INTERVAL '90 days')`);
+  return res;
+}
+
+export async function getLogsTableSize() {
+  const res = await pool.query(
+    `SELECT pg_size_pretty(pg_total_relation_size('logs')) as size`,
+  );
+  return res.rows[0]?.size || "unknown";
+}
