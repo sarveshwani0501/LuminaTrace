@@ -22,6 +22,8 @@ import {
 import { startLogsWorker } from "./kafka/workers/logsWorker.js";
 import { startMetricsWorker } from "./kafka/workers/metricsWorker.js";
 import redis from "./config/redis.js";
+import { startBackgroundJobs } from "./jobs/index.js";
+import { initializeSocketServer } from "./sockets/socket.server.js";
 
 export async function buildApp() {
   const fastify = Fastify({
@@ -95,6 +97,14 @@ export async function buildApp() {
   await fastify.register(metricsRoute);
 
   await fastify.register(alertRoute);
+
+  if (config.app.env !== "test") {
+    startBackgroundJobs();
+  }
+
+  initializeSocketServer(fastify);  
+
+  // Health check
 
   fastify.get("/health", async (request, reply) => {
     const health = {

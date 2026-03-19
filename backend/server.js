@@ -1,9 +1,9 @@
 import { buildApp } from "./src/app.js";
 import config from "./src/config/index.js";
 
-async function start() {
-  let app;
+let app;
 
+async function start() {
   try {
     // Build the Fastify app
     app = await buildApp();
@@ -29,8 +29,12 @@ async function start() {
 start();
 
 const shutdown = async (signal) => {
-  fastify.log.info(`Received ${signal}. Closing server...`);
-  await fastify.close();
+  if (!app) {
+    process.exit(0);
+  }
+
+  app.log.info(`Received ${signal}. Closing server...`);
+  await app.close();
   process.exit(0);
 };
 
