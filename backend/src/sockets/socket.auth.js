@@ -1,6 +1,5 @@
 import logger from "../utils/logger.js";
 import cookie from "cookie";
-import jwt from "jsonwebtoken";
 
 export function socketAuthMiddleware(fastify) {
   return async function (socket, next) {
@@ -36,7 +35,7 @@ export function socketAuthMiddleware(fastify) {
           "Invalid JWT token in WebSocket handshake",
         );
       }
-      
+
       if (err.name === "TokenExpiredError") {
         logger.warn("Expired JWT token in WebSocket handshake");
         return next(new Error("Authentication token expired"));

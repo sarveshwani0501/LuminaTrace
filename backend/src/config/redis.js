@@ -1,5 +1,5 @@
 import { Redis } from "ioredis";
-import logger from "../utils/logger";
+import logger from "../utils/logger.js";
 import config from "./index.js";
 
 const redis = new Redis({

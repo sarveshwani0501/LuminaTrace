@@ -6,7 +6,7 @@ export async function verifyProjectAccess(userId, projectId) {
         FROM projects p
         JOIN organizations o ON o.id = p.organization_id
         JOIN organization_members om ON om.organization_id = o.id
-        WHERE id = $1 AND om.user_id = $2
+        WHERE p.id = $1 AND om.user_id = $2
         LIMIT 1`,
     [projectId, userId],
   );

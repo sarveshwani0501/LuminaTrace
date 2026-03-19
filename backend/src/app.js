@@ -54,6 +54,8 @@ export async function buildApp() {
   // proper error handling
   fastify.setErrorHandler(errorHandler);
 
+  initializeSocketServer(fastify);
+
   try {
     await connectProducer();
   } catch (error) {
@@ -102,8 +104,6 @@ export async function buildApp() {
     startBackgroundJobs();
   }
 
-  initializeSocketServer(fastify);  
-
   // Health check
 
   fastify.get("/health", async (request, reply) => {
@@ -138,6 +138,22 @@ export async function buildApp() {
     }
 
     return health;
+  });
+
+  fastify.get("/socket-test", (request, reply) => {
+    import("fs").then((fs) => {
+      import("path").then((path) => {
+        const filePath = path.join(process.cwd(), "../socket-test.html");
+        try {
+          const html = fs.readFileSync(filePath, "utf8");
+          reply.type("text/html").send(html);
+        } catch (e) {
+          const altFilePath = path.join(process.cwd(), "socket-test.html");
+          const altHtml = fs.readFileSync(altFilePath, "utf8");
+          reply.type("text/html").send(altHtml);
+        }
+      });
+    });
   });
 
   return fastify;

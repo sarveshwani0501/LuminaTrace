@@ -4,17 +4,19 @@ import { socketAuthMiddleware } from "./socket.auth.js";
 import { verifyProjectAccess } from "../utils/authorization.js";
 import logger from "../utils/logger.js";
 
+let io;
+
 export function initializeSocketServer(fastify) {
-  const io = new Server(fastify.server, {
+  io = new Server(fastify.server, {
     cors: {
       origin: config.cors.origin,
       credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     },
   });
 
   // middleware for authenticating user
   io.use(socketAuthMiddleware(fastify));
-
 
   // establising connection with client
 
@@ -26,7 +28,7 @@ export function initializeSocketServer(fastify) {
       },
       "User connected via web sockets",
     );
-    // joining project room 
+    // joining project room
     socket.on("join_project", async (projectId) => {
       try {
         if (!projectId || typeof projectId !== "string") {
@@ -60,7 +62,6 @@ export function initializeSocketServer(fastify) {
         socket.emit("error", { message: "Failed to join project" });
       }
     });
-    
 
     // leaving the project room
     socket.on("leave_project", (projectId) => {
@@ -79,7 +80,7 @@ export function initializeSocketServer(fastify) {
           "User left the project room",
         );
 
-        socket.emit("left-project", { projectId });
+        socket.emit("left_project", { projectId });
       } catch (err) {
         logger.error({ err, projectId }, "Error leaving project room");
       }

@@ -11,6 +11,8 @@ import redis, { incrementHashField, pushAndTrim } from "../../config/redis.js";
 
 import * as logRepo from "../../modules/logs/logsRepository.js";
 
+import { getIO } from "../../sockets/socket.server.js";
+
 export async function startLogsWorker() {
   const consumer = createConsumer("logs-worker");
   // connecting the consumer
@@ -83,7 +85,6 @@ export async function startLogsWorker() {
             logger.info({ hostname: log.hostname }, "Auto registered server");
           }
         }
-       
 
         await logRepo.insertLog(log);
 
@@ -118,6 +119,14 @@ export async function startLogsWorker() {
         await pushAndTrim(recentLogsKey, logsSummary, 100);
 
         // sockets working here
+
+        const io = getIO();
+
+        io.to(`project:${log.projectId}`).emit("new_log", {
+          time: log.timestamp,
+          level: log.level,
+          message: log.message,
+        });
 
         logger.debug(
           { projectId: log.projectId },

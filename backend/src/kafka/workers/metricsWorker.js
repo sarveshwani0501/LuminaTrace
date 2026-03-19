@@ -11,6 +11,8 @@ import redis, { incrementHashField } from "../../config/redis.js";
 import { insertMetric } from "../../modules/metrics/metricsRepository.js";
 import * as alertsService from "../../modules/alerts/alertService.js";
 
+import { getIO } from "../../sockets/socket.server.js";
+
 export async function startMetricsWorker() {
   const consumer = createConsumer("metrics-worker");
 
@@ -119,6 +121,24 @@ export async function startMetricsWorker() {
         );
 
         // socket io code
+
+        // metric.timestamp,
+        // metric.projectId,
+        // metric.serverId,
+        // metric.name,
+        // metric.value,
+        // metric.unit,
+        // metric.tags ? JSON.stringify(metric.tags) : "{}"
+
+        const io = getIO();
+
+        io.to(`project:${metric.projectId}`).emit("new_metric", {
+          time: metric.timestamp,
+          name: metric.name,
+          value: metric.value,
+          unit: metric.unit,
+          tags: metric.tags,
+        });
 
         logger.debug(
           { projectId: metric.projectId },
