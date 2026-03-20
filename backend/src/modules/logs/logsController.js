@@ -97,3 +97,18 @@ export async function getErrorRate(req, reply) {
     });
   }
 }
+
+export async function getLogsByTraceId(req, reply) {
+  try {
+    const { traceId } = req.params;
+    const { projectId } = req.query;
+
+    const logs = await logService.getLogsByTrace(projectId, traceId);
+    return reply.code(200).send({ logs });
+  } catch (error) {
+    req.log.error({ error }, "Error fetching logs by trace");
+    return reply.code(error.statusCode || 500).send({
+      error: error.message || "Failed fetching logs by trace",
+    });
+  }
+}

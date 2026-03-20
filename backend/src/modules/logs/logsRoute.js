@@ -6,6 +6,7 @@ import {
   topRoutesSchema,
   logsVolumeSchema,
   errorRateSchema,
+  getLogsByTraceSchema,
 } from "./logsSchema.js";
 import authorise from "../../middlewares/authorise.js";
 import authenticate from "../../middlewares/authenticate.js";
@@ -70,5 +71,14 @@ export default async function logsRoute(fastify) {
       preHandler: [authenticate, authorise("member")],
     },
     logController.getErrorRate,
+  );
+
+  fastify.get(
+    "/logs/:traceId",
+    {
+      schema: getLogsByTraceSchema,
+      preHandler: [authenticate, authorise("member")],
+    },
+    logController.getLogsByTraceId,
   );
 }

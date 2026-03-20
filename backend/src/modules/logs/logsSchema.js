@@ -213,3 +213,43 @@ export const errorRateSchema = {
     },
   },
 };
+
+export const getLogsByTraceSchema = {
+  params: {
+    type: "object",
+    required: ["traceId"],
+    properties: {
+      traceId: { type: "string" },
+    },
+  },
+  querystring: {
+    type: "object",
+    required: ["projectId"],
+    properties: {
+      projectId: uuidSchema,
+    },
+  },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        logs: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              time: { type: "string" },
+              project_id: uuidSchema,
+              server_id: uuidSchema,
+              level: { type: "string" },
+              message: { type: "string" },
+              trace_id: uuidSchema,
+              span_id: uuidSchema,
+              metadata: { type: "object" },
+            },
+          },
+        },
+      },
+    },
+  },
+};

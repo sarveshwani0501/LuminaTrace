@@ -1,5 +1,8 @@
 import * as logRepo from "./logsRepository.js";
-import {getIntervalForWindow, parseTimeRange} from "../../utils/timeWindow.js"
+import {
+  getIntervalForWindow,
+  parseTimeRange,
+} from "../../utils/timeWindow.js";
 
 // GET  /logs?projectId=X&timerange=1h&level=ERROR&serverId=Y&limit=100&offset=0
 // GET  /logs/recent?projectId=X&limit=100
@@ -107,3 +110,19 @@ export async function getLogVolume(projectId, timeRange) {
 
   return { data, interval, from, to };
 }
+
+export async function getLogsByTrace(projectId, traceId) {
+  if (!projectId || !traceId) {
+    throw {
+      statusCode: 400,
+      message: "Missing required parameters",
+    };
+  }
+
+  const logs = await logRepo.getLogsByTrace(projectId, traceId);
+
+  return logs;
+}
+
+
+

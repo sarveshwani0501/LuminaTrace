@@ -316,3 +316,15 @@ export async function getLogsTableSize() {
   );
   return res.rows[0]?.size || "unknown";
 }
+
+export async function getLogsByTrace(projectId, traceId) {
+  const res = await pool.query(
+    `SELECT * FROM logs
+    WHERE project_id = $1
+    AND trace_id = $2
+    ORDER BY time ASC`,
+    [projectId, traceId],
+  );
+
+  return res.rows;
+}
