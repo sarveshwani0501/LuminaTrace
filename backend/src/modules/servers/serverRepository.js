@@ -18,6 +18,23 @@ export async function findServerByHostName({ projectId, hostname }) {
   return res.rows[0];
 }
 
+export async function getServerByProject(projectId) {
+  const res = await pool.query(
+    `SELECT * FROM servers WHERE project_id = $1 ORDER BY created_at DESC`,
+    [projectId],
+  );
+
+  return res.rows;
+}
+
+export async function getServerById(serverId, projectId) {
+  const res = await pool.query(
+    `SELECT id, project_id, name, hostname, ip_address, environment, tags, status, last_seen_at as last_heartbeat_at, created_at  FROM servers WHERE id = $1 AND project_id = $2 LIMIT 1`,
+    [serverId, projectId],
+  );
+  return res.rows[0];
+}
+
 // CREATE TABLE servers (
 //     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 //     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
