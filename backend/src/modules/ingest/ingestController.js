@@ -1,7 +1,7 @@
 import * as ingestService from "./ingestService.js";
 import { send } from "../../kafka/producer.js";
 import { topics } from "../../kafka/topics.js";
-
+import logger from "../../utils/logger.js";
 export async function ingestLogs(req, reply) {
   try {
     const logs = req.body.logs;
@@ -46,7 +46,7 @@ export async function heartbeat(req, reply) {
   try {
     const projectId = req.projectId;
     const serverData = req.body;
-
+    logger.info({ projectId, serverData });
     const serverId = await ingestService.updateServerHeartBeat(
       projectId,
       serverData,

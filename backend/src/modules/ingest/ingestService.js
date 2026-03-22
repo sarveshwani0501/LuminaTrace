@@ -56,7 +56,7 @@ export function enrichMetrics(metricData, projectId) {
 
 export async function updateServerHeartBeat(projectId, serverData) {
   const { name, hostname, ipAddress, environment, tags } = serverData;
-
+  const sanitizedIpAddress = ipAddress && ipAddress !== "" ? ipAddress : null;
   const existing = await pool.query(
     `SELECT id FROM servers WHERE project_id = $1 AND hostname = $2`,
     [projectId, hostname],
@@ -71,7 +71,7 @@ export async function updateServerHeartBeat(projectId, serverData) {
       `UPDATE servers SET last_seen_at = NOW(), ip_address = COALESCE($2, ip_address), name = COALESCE($3, name), environment = COALESCE($4, environment), tags = COALESCE($5, tags), status = 'online' WHERE id = $1`,
       [
         serverId,
-        ipAddress,
+        sanitizedIpAddress,
         name,
         environment,
         tags ? JSON.stringify(tags) : null,
@@ -83,7 +83,7 @@ export async function updateServerHeartBeat(projectId, serverData) {
       [
         projectId,
         hostname,
-        ipAddress || null,
+        sanitizedIpAddress || null,
         name || hostname,
         environment || "production",
         tags ? JSON.stringify(tags) : "{}",
