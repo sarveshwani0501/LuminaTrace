@@ -30,13 +30,16 @@ export async function startLogsWorker() {
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
       let log;
+      console.log(
+        "--------------------------------------------------------------------------------------------------",
+      );
       try {
         log = JSON.parse(message.value.toString());
 
         logger.debug(
           { projectId: log.projectId, level: log.level },
           "Log is being Processed",
-        );
+        )
 
         if (log.serverId) {
           const server = await findServerById({ serverId: log.serverId });
