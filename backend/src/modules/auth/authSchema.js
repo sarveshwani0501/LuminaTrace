@@ -112,3 +112,41 @@ export const signupViaInviteSchema = {
     },
   },
 };
+
+
+export const sendEmailVerificationSchema = {
+  body: {
+    type: "object",
+    required: ["email"],
+    properties: {
+      email: emailSchema,
+    },
+  },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        message: { type: "string" },
+      },
+    },
+  },
+};
+
+export const verifyEmailSchema = {
+  body: {
+    type: "object",
+    required: ["email", "otp"],
+    properties: {
+      email: emailSchema,
+      otp: { type: "string" },
+    },
+  },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        message: { type: "string" },
+      },
+    },
+  },
+}

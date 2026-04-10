@@ -9,8 +9,13 @@ import {
   updateLastLogin,
   getInviteByToken,
   markInviteAccepted,
+  updateEmailVerificationStatus
 } from "./authRepository.js";
 import { hashText, compareHash } from "../../utils/hash.js";
+
+import redis from "../../config/redis.js";
+import { transporter } from "../alerts/alertService.js";
+import config from "../../config/index.js";
 
 export async function signup({
   full_name,
@@ -132,4 +137,75 @@ export async function login({ email, password }) {
     },
     orgList,
   };
+}
+
+
+
+export async function sendOTPForEmailVerification(email) {
+  const user = await getUserByEmail(email);
+  if(!user) {
+    throw new Error('User does not exist');
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  await redis.set(`otp:verification:${email}`, otp, 'EX', 900);
+
+  await sendOTPEmail(email, otp, 'verification');
+
+  return { message: 'OTP sent successfully' };
+
+}
+
+
+export async function verifyOTPForEmailVerification(email, otp) {
+  const user = await getUserByEmail(email);
+  if(!user) {
+    throw new Error('User does not exist');
+  }
+
+  const storedOTP = await redis.get(`otp:verification:${email}`);
+  if(!storedOTP) {
+    throw new Error('OTP expired');
+  }
+
+  if(storedOTP !== otp) {
+    throw new Error('Invalid OTP');
+  }
+
+  await redis.del(`otp:verification:${email}`);
+  
+  await updateEmailVerificationStatus(email);
+
+
+  return { message: 'OTP verified successfully' };
+}
+
+
+
+
+// Helper method to send emails
+
+async function sendOTPEmail(email, otp, type) {
+  const subject = type === 'verification' 
+    ? 'Verify Your Email - LuminaTrace'
+    : 'Password Reset Code - LuminaTrace';
+    
+  const html = `
+    <h1>${type === 'verification' ? 'Verify Your Email' : 'Reset Your Password'}</h1>
+    <p>Your verification code is:</p>
+    <h2 style="background: #f0f0f0; padding: 10px; font-family: monospace;">
+      ${otp}
+    </h2>
+    <p>This code expires in 15 minutes.</p>
+    <p>If you didn't request this, please ignore this email.</p>
+  `;
+  
+
+  await transporter.sendMail({
+    from: config.smtp.from,
+    to: email,
+    subject,
+    html: html
+  })
 }

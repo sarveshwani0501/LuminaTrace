@@ -1,4 +1,4 @@
-import { signup, signupViaInvite, login } from "./authService.js";
+import { signup, signupViaInvite, login, sendOTPForEmailVerification, verifyOTPForEmailVerification } from "./authService.js";
 
 export function authController(fastify) {
   async function signupHandler(req, reply) {
@@ -112,10 +112,49 @@ export function authController(fastify) {
     });
   }
 
+  async function sendOTPForEmailVerificationHandler(req, reply) {
+    try {
+      const { email } = req.body;
+
+      const { message } = await sendOTPForEmailVerification(email);
+
+      return reply.code(200).send({ message });
+    } catch (error) {
+      if (error.message === "User does not exist") {
+        return reply.code(404).send({
+          error: "NotFoundError",
+          message: error.message,
+          statusCode: 404,
+        });
+      }
+      throw error;
+    }
+  }
+
+  async function verifyOTPForEmailVerificationHandler(req, reply) {
+    try{
+      const {email, otp} = req.body;
+      const {message} = await verifyOTPForEmailVerification(email, otp);
+
+      return reply.code(200).send({ message });
+    }catch(error){
+      if(error.message === "Invalid OTP" || error.message === "OTP expired"){
+        return reply.code(400).send({
+          error: "BadRequestError",
+          message: error.message,
+          statusCode: 400,
+        });
+      }
+      throw error;
+    }
+  }
+
   return {
     signup: signupHandler,
     signupUsingInvite: signupUsingInviteHandler,
     login: loginHandler,
     logout: logoutHandler,
+    sendOTPForEmailVerification: sendOTPForEmailVerificationHandler,
+    verifyOTPForEmailVerification: verifyOTPForEmailVerificationHandler,
   };
 }

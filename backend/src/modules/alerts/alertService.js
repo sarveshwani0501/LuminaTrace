@@ -13,6 +13,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+export { transporter };
+
 // Checking if any alert exists for the current situation
 
 export function evaluateRule(rule, currValue) {

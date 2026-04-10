@@ -3,6 +3,8 @@ import {
   signupSchema,
   loginSchema,
   signupViaInviteSchema,
+  sendEmailVerificationSchema,
+  verifyEmailSchema
 } from "./authSchema.js";
 
 export default async function authRoutes(fastify) {
@@ -13,11 +15,20 @@ export default async function authRoutes(fastify) {
   fastify.post("/auth/login", { schema: loginSchema }, ctrl.login);
 
   // to be removed
-  fastify.post(
-    "/auth/signup/invite/:token",
-    { schema: signupViaInviteSchema },
-    ctrl.signupUsingInvite,
-  );
+  // fastify.post(
+  //   "/auth/signup/invite/:token",
+  //   { schema: signupViaInviteSchema },
+  //   ctrl.signupUsingInvite,
+  // );
 
   fastify.post("/auth/logout", ctrl.logout);
+
+
+  // /auth/verify-email/send
+  fastify.post("/auth/verify-email/send", { schema: sendEmailVerificationSchema }, ctrl.sendOTPForEmailVerification);
+  // /auth/verify-email/verify
+  fastify.post("/auth/verify-email/verify", { schema: verifyEmailSchema }, ctrl.verifyOTPForEmailVerification);
+
+  // /auth/password-reset/request
+  // /auth/password-reset/verify
 }
