@@ -12,13 +12,6 @@ export function authController(fastify) {
         organization_name,
       });
 
-      const token = fastify.jwt.sign(
-        { userId: user.id, email: user.email },
-        { expiresIn: "24h" },
-      );
-
-      reply.setAuthCookie(token);
-
       return reply.code(201).send({ user, organization });
     } catch (error) {
       if (error.message === "Email id already exists") {
@@ -134,7 +127,14 @@ export function authController(fastify) {
   async function verifyOTPForEmailVerificationHandler(req, reply) {
     try{
       const {email, otp} = req.body;
-      const {message} = await verifyOTPForEmailVerification(email, otp);
+      const {message, user} = await verifyOTPForEmailVerification(email, otp);
+
+      const token = fastify.jwt.sign(
+        { userId: user.id, email: user.email },
+        { expiresIn: "24h" },
+      );
+
+      reply.setAuthCookie(token);
 
       return reply.code(200).send({ message });
     }catch(error){

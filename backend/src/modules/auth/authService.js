@@ -177,8 +177,7 @@ export async function verifyOTPForEmailVerification(email, otp) {
   
   await updateEmailVerificationStatus(email);
 
-
-  return { message: 'OTP verified successfully' };
+  return { message: 'OTP verified successfully', user };
 }
 
 
