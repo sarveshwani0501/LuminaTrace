@@ -13,6 +13,7 @@ import {
 } from "./authRepository.js";
 import { hashText, compareHash } from "../../utils/hash.js";
 
+import crypto from "crypto";
 import redis from "../../config/redis.js";
 import { transporter } from "../alerts/alertService.js";
 import config from "../../config/index.js";
@@ -183,6 +184,32 @@ export async function verifyOTPForEmailVerification(email, otp) {
 
 
 
+export async function sendPasswordResetRequest(email) {
+  const user = await getUserByEmail(email);
+  if(!user) {
+    throw new Error('User does not exist');
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const url = 'http://localhost:5173/auth/password-reset/verify?token=' + token;
+  await redis.set(`reset:${token}`, email, 'EX', 900);
+  await sendOTPEmail(email, url, 'reset');
+  return { message: 'Password reset link sent successfully' };
+}
+
+
+export async function verifyPasswordResetToken(token) {
+  const email = await redis.get(`reset:${token}`);
+  if(!email) {
+    throw new Error('Token expired');
+  }
+  return { message: 'Token verified successfully', email };
+}
+
+
+
+
+
 // Helper method to send emails
 
 async function sendOTPEmail(email, otp, type) {
@@ -196,7 +223,7 @@ async function sendOTPEmail(email, otp, type) {
     <h2 style="background: #f0f0f0; padding: 10px; font-family: monospace;">
       ${otp}
     </h2>
-    <p>This code expires in 15 minutes.</p>
+    <p>This ${type === 'verification' ? 'verification code' : 'reset link'} expires in 15 minutes.</p>
     <p>If you didn't request this, please ignore this email.</p>
   `;
   

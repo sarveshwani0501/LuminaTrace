@@ -31,4 +31,5 @@ export default async function authRoutes(fastify) {
 
   // /auth/password-reset/request
   // /auth/password-reset/verify
+  fastify.post('/auth/password-reset/request')
 }
