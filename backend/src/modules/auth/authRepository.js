@@ -141,3 +141,21 @@ export async function updateEmailVerificationStatus(email) {
   );
   return res.rows[0];
 }
+
+
+export async function updatePassword(email, password_hash) {
+  const res = await pool.query(
+    `UPDATE users SET password_hash = $1 WHERE email = $2 RETURNING *`,
+    [password_hash, email]
+  );
+
+  return res.rows[0];
+}
+
+export async function updatePasswordById(userId, password_hash) {
+  const res = await pool.query(
+    `UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING *`,
+    [password_hash, userId]
+  );
+  return res.rows[0];
+}

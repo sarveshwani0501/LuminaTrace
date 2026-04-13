@@ -4,8 +4,12 @@ import {
   loginSchema,
   signupViaInviteSchema,
   sendEmailVerificationSchema,
-  verifyEmailSchema
+  verifyEmailSchema,
+  sendPasswordResetRequestSchema,
+  resetPasswordSchema,
+  changePasswordSchema
 } from "./authSchema.js";
+import { authenticate } from "../../middlewares/authenticate.js";
 
 export default async function authRoutes(fastify) {
   const ctrl = authController(fastify);
@@ -30,6 +34,11 @@ export default async function authRoutes(fastify) {
   fastify.post("/auth/verify-email/verify", { schema: verifyEmailSchema }, ctrl.verifyOTPForEmailVerification);
 
   // /auth/password-reset/request
-  // /auth/password-reset/verify
-  fastify.post('/auth/password-reset/request')
+  fastify.post("/auth/password-reset/request", { schema: sendPasswordResetRequestSchema }, ctrl.sendPasswordResetRequest);
+  
+  // /auth/password-reset/verify (we rename the verb to reset)
+  fastify.post("/auth/password-reset/reset", { schema: resetPasswordSchema }, ctrl.resetPassword);
+
+  // /auth/password/change (authenticated endpoint)
+  fastify.post("/auth/password/change", { schema: changePasswordSchema, preValidation: [authenticate] }, ctrl.changePassword);
 }

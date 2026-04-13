@@ -149,4 +149,60 @@ export const verifyEmailSchema = {
       },
     },
   },
-}
+};
+
+export const sendPasswordResetRequestSchema = {
+  body: {
+    type: "object",
+    required: ["email"],
+    properties: {
+      email: emailSchema,
+    },
+  },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        message: { type: "string" },
+      },
+    },
+  },
+};
+
+export const resetPasswordSchema = {
+  body: {
+    type: "object",
+    required: ["token", "newPassword"],
+    properties: {
+      token: { type: "string" },
+      newPassword: passwordSchema,
+    },
+  },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        message: { type: "string" },
+      },
+    },
+  },
+};
+
+export const changePasswordSchema = {
+  body: {
+    type: "object",
+    required: ["oldPassword", "newPassword"],
+    properties: {
+      oldPassword: { type: "string" },
+      newPassword: passwordSchema,
+    },
+  },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        message: { type: "string" },
+      },
+    },
+  },
+};

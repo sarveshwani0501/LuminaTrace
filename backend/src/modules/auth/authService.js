@@ -9,7 +9,8 @@ import {
   updateLastLogin,
   getInviteByToken,
   markInviteAccepted,
-  updateEmailVerificationStatus
+  updateEmailVerificationStatus,
+  updatePassword
 } from "./authRepository.js";
 import { hashText, compareHash } from "../../utils/hash.js";
 
@@ -191,19 +192,52 @@ export async function sendPasswordResetRequest(email) {
   }
 
   const token = crypto.randomBytes(32).toString('hex');
-  const url = 'http://localhost:5173/auth/password-reset/verify?token=' + token;
+  const url = 'http://localhost:5173/password-reset/verify?token=' + token;
   await redis.set(`reset:${token}`, email, 'EX', 900);
   await sendOTPEmail(email, url, 'reset');
   return { message: 'Password reset link sent successfully' };
 }
 
-
-export async function verifyPasswordResetToken(token) {
+export async function resetPassword(token, newPassword) {
+  if(!token) throw new Error('Token cannot be null');
+  
   const email = await redis.get(`reset:${token}`);
   if(!email) {
     throw new Error('Token expired');
   }
-  return { message: 'Token verified successfully', email };
+
+  const hashedPassword = await hashText(newPassword);
+
+  const res = await updatePassword(email, hashedPassword);
+
+  if(!res) {
+    throw new Error('Password change failed');
+  }
+
+  await redis.del(`reset:${token}`);
+
+  return { message: 'Password Reset Successful' }
+}
+
+export async function changePassword(userId, oldPassword, newPassword) {
+  const user = await getUserById(userId);
+  if (!user) throw new Error('User does not exist');
+
+  const { password_hash } = await pool.query('SELECT password_hash FROM users WHERE id = $1', [userId]).then(r => r.rows[0]);
+
+  const isMatch = await compareHash(oldPassword, password_hash);
+  if (!isMatch) {
+    throw new Error('Incorrect old password');
+  }
+
+  const hashedPassword = await hashText(newPassword);
+  const res = await updatePasswordById(userId, hashedPassword);
+
+  if(!res) {
+    throw new Error('Password change failed');
+  }
+
+  return { message: 'Password changed successfully' };
 }
 
 
