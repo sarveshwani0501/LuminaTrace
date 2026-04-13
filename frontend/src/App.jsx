@@ -7,6 +7,7 @@ import SignupPage from './pages/auth/SignupPage';
 import OTPVerificationPage from './pages/auth/OTPVerificationPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import InvitePage from './pages/auth/InvitePage';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/verify-otp" element={<OTPVerificationPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/password-reset/verify" element={<ResetPasswordPage />} />
+          <Route path="/invite/:token" element={<InvitePage />} />
         </Route>
         
         {/* Protected App Routes will go here */}
