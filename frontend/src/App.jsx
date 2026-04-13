@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import PublicLayout from './components/layout/PublicLayout';
+import PrivateLayout from './components/layout/PrivateLayout';
 import LandingPage from './pages/public/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
@@ -24,7 +25,20 @@ function App() {
           <Route path="/invite/:token" element={<InvitePage />} />
         </Route>
         
-        {/* Protected App Routes will go here */}
+        {/* Protected App Routes - Bypassing auth wrapper for current UI development */}
+        <Route path="/app" element={<PrivateLayout />}>
+          <Route path="dashboard" element={
+            <div className="text-text-primary">
+              <h1 className="text-3xl font-bold tracking-tight mb-2">Metrics Overview</h1>
+              <p className="text-text-secondary">KPI grid and telemetry visualizations will mount here.</p>
+            </div>
+          } />
+          
+          <Route path="metrics" element={<div className="text-white">Metrics List</div>} />
+          <Route path="logs" element={<div className="text-white">Real-time Logs Terminal</div>} />
+          <Route path="alerts" element={<div className="text-white">Alert Configurations</div>} />
+          <Route path="settings" element={<div className="text-white">Workspace Settings</div>} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
