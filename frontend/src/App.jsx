@@ -9,6 +9,7 @@ import OTPVerificationPage from './pages/auth/OTPVerificationPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import InvitePage from './pages/auth/InvitePage';
+import Dashboard from './pages/app/Dashboard';
 
 function App() {
   return (
@@ -27,12 +28,7 @@ function App() {
         
         {/* Protected App Routes - Bypassing auth wrapper for current UI development */}
         <Route path="/app" element={<PrivateLayout />}>
-          <Route path="dashboard" element={
-            <div className="text-text-primary">
-              <h1 className="text-3xl font-bold tracking-tight mb-2">Metrics Overview</h1>
-              <p className="text-text-secondary">KPI grid and telemetry visualizations will mount here.</p>
-            </div>
-          } />
+          <Route path="dashboard" element={<Dashboard />} />
           
           <Route path="metrics" element={<div className="text-white">Metrics List</div>} />
           <Route path="logs" element={<div className="text-white">Real-time Logs Terminal</div>} />
