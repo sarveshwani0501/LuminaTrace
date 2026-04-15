@@ -10,6 +10,7 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import InvitePage from './pages/auth/InvitePage';
 import Dashboard from './pages/app/Dashboard';
+import Metrics from './pages/app/Metrics';
 
 function App() {
   return (
@@ -30,7 +31,7 @@ function App() {
         <Route path="/app" element={<PrivateLayout />}>
           <Route path="dashboard" element={<Dashboard />} />
           
-          <Route path="metrics" element={<div className="text-white">Metrics List</div>} />
+          <Route path="metrics" element={<Metrics />} />
           <Route path="logs" element={<div className="text-white">Real-time Logs Terminal</div>} />
           <Route path="alerts" element={<div className="text-white">Alert Configurations</div>} />
           <Route path="settings" element={<div className="text-white">Workspace Settings</div>} />
