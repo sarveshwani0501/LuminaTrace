@@ -84,3 +84,10 @@ export async function markServerOffline(serverId) {
 
   return res.rows[0];
 }
+
+export async function countOnlineServersByProject() {
+  const res = await pool.query(
+    `SELECT project_id, COUNT(id)::int as online_count FROM servers WHERE status = 'online' GROUP BY project_id`
+  );
+  return res.rows;
+}
