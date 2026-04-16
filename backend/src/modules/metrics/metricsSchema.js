@@ -81,3 +81,47 @@ export const latestMetricsSchema = {
     },
   },
 };
+
+
+export const metricsTimeseriesP99Schema = {
+  querystring: {
+    type: "object",
+    required: ["projectId", "timerange"],
+    properties: {
+      projectId: uuidSchema,
+      timerange: {
+        type: "string",
+        enum: ["30m", "1h", "6h", "24h", "7d", "30d"],
+      },
+      serverId: uuidSchema,
+    },
+  },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        data: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              bucket: { type: "string" },
+              name: { type: "string" },
+              p99_value: { type: "number" },
+              unit: { type: "string" },
+              server_id: uuidSchema,
+              server_name: { type: "string" },
+              server_hostname: { type: "string" },
+              server_environment: { type: "string" },
+            },
+          },
+        },
+        metric_name: { type: "string" },
+        interval: { type: "string" },
+        from: { type: "string" },
+        to: { type: "string" },
+        aggregation: { type: "string" },
+      },
+    },
+  },
+};

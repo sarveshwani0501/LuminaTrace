@@ -1,10 +1,13 @@
 // GET  /metrics/timeseries?projectId=X&metricName=cpu_usage&timerange=6h&serverId=Y (optional)
 // GET  /metrics/latest?projectId=X&serverId=Y (optional)
 
+// GET /metrics/timeseries/p99?projectId=X&timerange=6h&serverId=Y (optional)
+
 import {
   getMetricTimeSeries,
   getLatestMetricsFromDB,
   getLatestMetricsFromRedis,
+  getMetricTimeSeriesP99
 } from "./metricsRepository.js";
 import {
   parseTimeRange,
@@ -48,6 +51,46 @@ export async function getTimeseriesData(
       from,
       to,
       aggregation: null,
+    };
+  } catch (err) {
+    console.log("Error", { err });
+    throw {
+      statusCode: 500,
+      message: `Internal Server Error ${err}`,
+    };
+  }
+}
+
+
+export async function getTimeSeriesP99(projectId, timerange, serverId = null) {
+  try {
+    if (!projectId) {
+      throw new Error("Project ID is required");
+    }
+    if (!timerange) {
+      timerange = "1h";
+    }
+
+    const { from, to } = parseTimeRange(timerange);
+
+    const interval = getIntervalForWindow(timerange);
+
+    const data = await getMetricTimeSeriesP99(
+      projectId,
+      "response_time",
+      interval,
+      from,
+      to,
+      serverId,
+    );
+
+    return {
+      data,
+      metric_name: "response_time",
+      interval,
+      from,
+      to,
+      aggregation: "p99",
     };
   } catch (err) {
     console.log("Error", { err });

@@ -33,3 +33,16 @@ export async function getLatestMetricData(req, reply) {
     });
   }
 }
+
+export async function getTimeSeriesP99Handler(req, reply) {
+  try {
+    const { projectId, timerange, serverId } = req.query;
+    const res = await metricService.getTimeSeriesP99(projectId, timerange, serverId);
+    return reply.code(200).send(res);
+  } catch (err) {
+    req.log.error({ err }, "Error fetching time series p99 data");
+    return reply.code(err.statusCode || 500).send({
+      error: err.message || "Error fetching time series p99 data",
+    });
+  }
+}

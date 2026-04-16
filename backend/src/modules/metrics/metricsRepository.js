@@ -129,6 +129,74 @@ export async function getMetricTimeSeries(
   }
 }
 
+export async function getMetricTimeSeriesP99(
+  projectId,
+  metricName,
+  interval,
+  from,
+  to,
+  serverId = null,
+) {
+  try {
+    if (!interval) {
+      throw new Error("Interval is required for metrics query");
+    }
+
+    let query;
+    let params;
+
+    if (serverId) {
+      query = `
+        SELECT 
+          time_bucket($1, m.time) AS bucket,
+          PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY m.value) AS p99_value,
+          m.metric_name AS name,
+          m.unit,
+          m.server_id,
+          s.name AS server_name,
+          s.hostname AS server_hostname,
+          s.environment AS server_environment
+        FROM metrics m
+        LEFT JOIN servers s ON m.server_id = s.id
+        WHERE m.project_id = $2
+          AND m.time >= $3
+          AND m.time <= $4
+          AND m.metric_name = $5
+          AND m.server_id = $6
+        GROUP BY bucket, m.metric_name, m.unit, m.server_id, s.name, s.hostname, s.environment
+        ORDER BY bucket DESC`;
+      params = [interval, projectId, from, to, metricName, serverId];
+    } else {
+      query = `
+        SELECT 
+          time_bucket($1, m.time) AS bucket,
+          PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY m.value) AS p99_value,
+          m.metric_name AS name,
+          m.unit
+        FROM metrics m
+        WHERE m.project_id = $2
+          AND m.time >= $3
+          AND m.time <= $4
+          AND m.metric_name = $5
+        GROUP BY bucket, m.metric_name, m.unit
+        ORDER BY bucket DESC`;
+      params = [interval, projectId, from, to, metricName];
+    }
+
+    const res = await pool.query(query, params);
+    return res.rows || [];
+  } catch (error) {
+    console.error("Error fetching metrics time-series:", error);
+    throw new Error(`Failed to fetch metrics: ${error.message}`);
+  }
+}
+
+
+
+
+
+
+
 export async function getLatestMetricsFromRedis(projectId) {
   try {
     const key = `latest_metric:${projectId}`;
