@@ -18,5 +18,14 @@ export const metricsApi = {
     let url = `/metrics/timeseries?projectId=${projectId}&metricName=${metricName}&timerange=${timerange}`;
     if (serverId) url += `&serverId=${serverId}`;
     return api.get(url);
+  },
+
+  /**
+   * Fetch P99 Latency specific timeseries (PostgreSQL-backed percentile query).
+   */
+  getTimeseriesP99: (projectId, timerange = '1h', serverId = null) => {
+    let url = `/metrics/timeseries/p99?projectId=${projectId}&timerange=${timerange}`;
+    if (serverId) url += `&serverId=${serverId}`;
+    return api.get(url);
   }
 };
