@@ -8,6 +8,7 @@ import {
   TerminalSquare, Cpu, HardDrive, Search, Filter, Server, Clock, ChevronDown, Check
 } from 'lucide-react';
 import { io } from 'socket.io-client';
+import TraceWaterfallModal from '../../components/traces/TraceWaterfallModal';
 
 const Logs = () => {
   const { currentProject } = useSelector(state => state.project) || { currentProject: { id: 'mock-alpha' } };
@@ -21,6 +22,7 @@ const Logs = () => {
   const [isTimeDropdownOpen, setIsTimeDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(null); // 'ERROR', 'WARN', 'INFO', 'DEBUG', or null
+  const [activeTraceId, setActiveTraceId] = useState(null);
   
   // Strict Mock State mapping exactly to DB schema fields
   const [logs, setLogs] = useState([]);
@@ -165,7 +167,7 @@ const Logs = () => {
           </div>
 
           {/* Time Filter */}
-          <div className="relative">
+          <div className="relative z-[60]">
             <div 
               onClick={() => setIsTimeDropdownOpen(!isTimeDropdownOpen)}
               className={`flex items-center bg-[#11151c] border cursor-pointer ${isTimeDropdownOpen ? 'border-[#818cf8]' : 'border-white/10'} hover:border-[#818cf8] transition-colors rounded-lg px-4 py-2 text-sm text-[#8b949e]`}
@@ -270,10 +272,14 @@ const Logs = () => {
               </div>
               <div className="w-[15%] flex justify-center">
                   {log.trace_id ? (
-                     <div className="inline-flex items-center space-x-1.5 text-[#a5b4fc] group">
-                       <span className="font-mono text-xs">{log.trace_id.substring(0, 12)}...</span>
+                     <button 
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTraceId(log.trace_id); }}
+                        className="inline-flex items-center space-x-1.5 text-[#a5b4fc] group cursor-pointer hover:bg-[#a5b4fc]/10 px-2 py-0.5 rounded transition-all"
+                     >
+                       <span className="font-mono text-xs border-b border-transparent group-hover:border-[#a5b4fc]">{log.trace_id.substring(0, 12)}...</span>
                        <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                     </div>
+                     </button>
                   ) : (
                      <span className="text-[#4b5563] font-mono text-xs">--</span>
                   )}
@@ -283,6 +289,11 @@ const Logs = () => {
         </div>
       </div>
 
+      {/* RENDER WATERFALL MODAL ODDLY IF OPEN */}
+      <TraceWaterfallModal 
+         traceId={activeTraceId} 
+         onClose={() => setActiveTraceId(null)} 
+      />
 
     </div>
   );
