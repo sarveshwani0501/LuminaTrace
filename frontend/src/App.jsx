@@ -13,6 +13,7 @@ import Dashboard from './pages/app/Dashboard';
 import Metrics from './pages/app/Metrics';
 import Logs from './pages/app/Logs';
 import Alerts from './pages/app/Alerts';
+import Settings from './pages/app/Settings';
 
 function App() {
   return (
@@ -36,7 +37,7 @@ function App() {
           <Route path="metrics" element={<Metrics />} />
           <Route path="logs" element={<Logs />} />
           <Route path="alerts" element={<Alerts />} />
-          <Route path="settings" element={<div className="text-white">Workspace Settings</div>} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>
