@@ -12,6 +12,7 @@ import InvitePage from './pages/auth/InvitePage';
 import Dashboard from './pages/app/Dashboard';
 import Metrics from './pages/app/Metrics';
 import Logs from './pages/app/Logs';
+import Alerts from './pages/app/Alerts';
 
 function App() {
   return (
@@ -34,7 +35,7 @@ function App() {
           
           <Route path="metrics" element={<Metrics />} />
           <Route path="logs" element={<Logs />} />
-          <Route path="alerts" element={<div className="text-white">Alert Configurations</div>} />
+          <Route path="alerts" element={<Alerts />} />
           <Route path="settings" element={<div className="text-white">Workspace Settings</div>} />
         </Route>
       </Routes>
