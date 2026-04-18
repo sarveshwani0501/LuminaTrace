@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   ShieldCheck, Map, Users, Eye, EyeOff, Copy, 
-  Trash2, RotateCw, CheckCircle2, AlertTriangle, Send
+  Trash2, RotateCw, CheckCircle2, AlertTriangle, Send,X
 } from 'lucide-react';
 
 const mockMembers = [
@@ -14,6 +14,65 @@ const mockInvites = [
   { id: 'inv_1', email: 'jax.v@nebula.net', sentAt: '2 days ago' }
 ];
 
+const DangerActionModal = ({ title, description, expectedText, confirmLabel, onClose, onConfirm }) => {
+  const [inputText, setInputText] = useState('');
+  
+  const isMatch = inputText === expectedText;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (isMatch) {
+      onConfirm();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-[#0d1117] border border-[#7f1d1d] rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col relative">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[#ef4444]/10 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div className="flex justify-between items-center px-6 py-4 border-b border-[#2d333b] bg-[#450a0a]/30">
+          <div className="flex items-center space-x-2">
+             <AlertTriangle className="w-5 h-5 text-[#ef4444]" />
+             <h2 className="text-white font-bold text-lg">{title}</h2>
+          </div>
+          <button onClick={onClose} className="p-2 ml-4 hover:bg-white/10 rounded-full transition-colors text-[#8b949e] hover:text-white">
+             <X className="w-5 h-5"/>
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 bg-[#0a0c10]">
+          <p className="text-sm text-[#fca5a5]">{description}</p>
+          
+          <div className="bg-[#11151c] border border-[#2d333b] p-4 rounded-lg">
+             <label className="block text-xs font-mono text-[#8b949e] uppercase mb-2">
+               Please type <strong className="text-white select-all">{expectedText}</strong> to verify.
+             </label>
+             <input 
+                required
+                type="text" 
+                value={inputText}
+                onChange={e => setInputText(e.target.value)}
+                className="w-full bg-[#0d1117] border border-[#2d333b] text-white font-mono text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-[#ef4444] transition-colors" 
+             />
+          </div>
+
+          <div className="pt-4 flex justify-end space-x-3 border-t border-[#2d333b] pt-5 mt-2">
+             <button type="button" onClick={onClose} className="px-5 py-2 text-sm text-[#8b949e] hover:text-white font-medium transition-colors">Cancel</button>
+             <button 
+               type="submit" 
+               disabled={!isMatch}
+               className={`px-6 py-2 text-sm font-semibold rounded-lg shadow-lg transition-all flex items-center ${isMatch ? 'bg-[#ef4444] hover:bg-[#dc2626] text-white cursor-pointer shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'bg-[#ef4444]/30 text-[#fca5a5]/50 cursor-not-allowed border border-[#ef4444]/20'}`}
+             >
+                {confirmLabel}
+             </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile'); // profile | project | org
   const [previewRole, setPreviewRole] = useState('owner'); // 'owner' | 'member'
@@ -23,6 +82,7 @@ const Settings = () => {
   
   // Tab 2 States
   const maskedKey = "lu_live_********************************";
+  const [activeDangerModal, setActiveDangerModal] = useState(null); // 'rotate' | 'delete' | null
   
   // Tab 3 States
   const [inviteEmail, setInviteEmail] = useState('');
@@ -204,7 +264,10 @@ const Settings = () => {
                              <h4 className="text-white font-bold text-sm">Rotate API Key</h4>
                              <p className="text-xs text-[#8b949e]">Invalidates the current key. You will need to update all your services.</p>
                           </div>
-                          <button className="px-5 py-2 inline-flex items-center bg-[#ef4444]/10 hover:bg-[#ef4444]/20 border border-[#ef4444] text-[#ef4444] text-xs font-bold uppercase rounded-lg transition-colors">
+                          <button 
+                            onClick={() => setActiveDangerModal('rotate')}
+                            className="px-5 py-2 inline-flex items-center bg-[#ef4444]/10 hover:bg-[#ef4444]/20 border border-[#ef4444] text-[#ef4444] text-xs font-bold uppercase rounded-lg transition-colors"
+                          >
                              <RotateCw className="w-3.5 h-3.5 mr-2" /> Rotate Key
                           </button>
                        </div>
@@ -215,7 +278,10 @@ const Settings = () => {
                                <h4 className="text-white font-bold text-sm">Delete Project</h4>
                                <p className="text-xs text-[#8b949e]">Permanently deletes the project and all associated logs and metrics.</p>
                             </div>
-                            <button className="px-5 py-2 inline-flex items-center bg-[#ef4444] hover:bg-[#dc2626] border border-[#ef4444] text-white shadow-[0_0_15px_rgba(239,68,68,0.4)] text-xs font-bold uppercase rounded-lg transition-all">
+                            <button 
+                              onClick={() => setActiveDangerModal('delete')}
+                              className="px-5 py-2 inline-flex items-center bg-[#ef4444] hover:bg-[#dc2626] border border-[#ef4444] text-white shadow-[0_0_15px_rgba(239,68,68,0.4)] text-xs font-bold uppercase rounded-lg transition-all"
+                            >
                                <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Project
                             </button>
                          </div>
@@ -319,6 +385,36 @@ const Settings = () => {
          )}
          
       </div>
+
+      {/* Dynamic Danger Modals */}
+      {activeDangerModal === 'rotate' && (
+         <DangerActionModal 
+            title="Rotate API Key"
+            description="Warning: Rotating the SDK API Key will instantly fail ingestion for all currently deployed microservices using the old key. Proceed carefully."
+            expectedText="ROTATE"
+            confirmLabel="Force Rotate Key"
+            onClose={() => setActiveDangerModal(null)}
+            onConfirm={() => {
+              alert("Wait implicitly for new key delivery: lu_live_newKey...");
+              setActiveDangerModal(null);
+            }}
+         />
+      )}
+
+      {activeDangerModal === 'delete' && (
+         <DangerActionModal 
+            title="Delete Project: Project Alpha"
+            description="Caution: Project Alpha and all of its metric telemetry, logs, and alert rules will be permanently eradicated. This action cannot be undone."
+            expectedText="Project Alpha"
+            confirmLabel="Permanently Delete"
+            onClose={() => setActiveDangerModal(null)}
+            onConfirm={() => {
+              alert("Project 'Project Alpha' Obliterated!");
+              setActiveDangerModal(null);
+            }}
+         />
+      )}
+
     </div>
   );
 };
