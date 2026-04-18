@@ -270,8 +270,8 @@ const Dashboard = () => {
               </defs>
               <XAxis dataKey="time" hide />
               <RechartsTooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
-              <Area type="monotone" dataKey="cpu" stroke="#818cf8" strokeWidth={3} fillOpacity={1} fill="url(#colorCpu)" activeDot={{ r: 6, fill: '#818cf8', stroke: '#111827', strokeWidth: 2 }} />
-              <Area type="monotone" dataKey="memory" stroke="#38bdf8" strokeWidth={3} fillOpacity={1} fill="url(#colorMem)" activeDot={{ r: 6, fill: '#38bdf8', stroke: '#111827', strokeWidth: 2 }} />
+              <Area isAnimationActive={false} type="monotone" dataKey="cpu" stroke="#818cf8" strokeWidth={3} fillOpacity={1} fill="url(#colorCpu)" activeDot={{ r: 6, fill: '#818cf8', stroke: '#111827', strokeWidth: 2 }} />
+              <Area isAnimationActive={false} type="monotone" dataKey="memory" stroke="#38bdf8" strokeWidth={3} fillOpacity={1} fill="url(#colorMem)" activeDot={{ r: 6, fill: '#38bdf8', stroke: '#111827', strokeWidth: 2 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -285,9 +285,14 @@ const Dashboard = () => {
           <div className="bg-surface/50 border-b border-border px-4 py-3 flex justify-between items-center shrink-0">
             <div className="flex items-center space-x-2">
               <TerminalSquare className="w-4 h-4 text-primary" />
-              <span className="text-xs font-mono font-semibold text-text-primary">Real-time Stream: <span className="text-text-muted">app-cluster</span></span>
+              <span className="text-xs font-mono font-semibold text-text-primary">Live Terminal Stream <span className="text-text-muted opacity-50 ml-2">|</span></span>
+              
+              {/* Routing Link to full logs */}
+              <button onClick={() => window.location.href = '/app/logs'} className="text-[10px] text-primary hover:text-primary/70 font-bold uppercase transition-colors flex items-center bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                View Full Stream
+              </button>
             </div>
-            <div className="flex space-x-1 border border-border rounded-full p-1">
+            <div className="flex space-x-1 border border-border rounded-full p-1 opacity-60">
               <div className="w-2 h-2 rounded-full bg-accent-error"></div>
               <div className="w-2 h-2 rounded-full bg-accent-warning"></div>
               <div className="w-2 h-2 rounded-full bg-accent-success"></div>
@@ -323,7 +328,7 @@ const Dashboard = () => {
                 <Route className="w-4 h-4 text-secondary" />
                 <h2 className="text-sm font-bold text-text-primary">Top API Endpoints</h2>
              </div>
-             <span className="text-xs bg-background px-2 py-1 rounded text-text-muted font-mono">P95 Latency map</span>
+             <span className="text-[10px] bg-background px-2 py-1 rounded border border-border text-text-muted font-mono uppercase tracking-wider">Avg Latency Map</span>
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-5 pr-2">

@@ -21,7 +21,7 @@ const Logs = () => {
   const [timeRange, setTimeRange] = useState('1h');
   const [isTimeDropdownOpen, setIsTimeDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLevel, setSelectedLevel] = useState(null); // 'ERROR', 'WARN', 'INFO', 'DEBUG', or null
+  const [selectedLevels, setSelectedLevels] = useState([]); // Array supporting multi-select e.g. ['ERROR', 'WARN']
   const [activeTraceId, setActiveTraceId] = useState(null);
   
   // Strict Mock State mapping exactly to DB schema fields
@@ -122,24 +122,24 @@ const Logs = () => {
           
           <div className="flex space-x-2 justify-end">
             <div 
-              onClick={() => setSelectedLevel(selectedLevel === 'ERROR' ? null : 'ERROR')}
-              className={`px-3 py-1.5 border rounded text-xs font-mono flex items-center cursor-pointer transition-colors ${selectedLevel === 'ERROR' || !selectedLevel ? 'bg-[#450a0a]/80 text-[#fca5a5] border-[#7f1d1d] shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'bg-[#11151c] text-[#8b949e] border-white/10 hover:border-white/30'}`}>
-              <div className="w-1.5 h-1.5 rounded-full bg-[#ef4444] mr-2"></div>ERROR (8)
+              onClick={() => setSelectedLevels(prev => prev.includes('ERROR') ? prev.filter(l => l !== 'ERROR') : [...prev, 'ERROR'])}
+              className={`px-3 py-1.5 border rounded text-xs font-mono flex items-center cursor-pointer transition-colors ${selectedLevels.includes('ERROR') || selectedLevels.length === 0 ? 'bg-[#450a0a]/80 text-[#fca5a5] border-[#7f1d1d] shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'bg-[#11151c] text-[#8b949e] border-[#2d333b] hover:border-white/30'}`}>
+              <div className="w-1.5 h-1.5 rounded-full bg-[#ef4444] mr-2"></div>ERROR
             </div>
             <div 
-              onClick={() => setSelectedLevel(selectedLevel === 'WARN' ? null : 'WARN')}
-              className={`px-3 py-1.5 border rounded text-xs font-mono flex items-center cursor-pointer transition-colors ${selectedLevel === 'WARN' || !selectedLevel ? 'bg-[#451a03]/80 text-[#fdba74] border-[#78350f]' : 'bg-[#11151c] text-[#8b949e] border-white/10 hover:border-white/30'}`}>
-              <div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] mr-2"></div>WARN (12)
+              onClick={() => setSelectedLevels(prev => prev.includes('WARN') ? prev.filter(l => l !== 'WARN') : [...prev, 'WARN'])}
+              className={`px-3 py-1.5 border rounded text-xs font-mono flex items-center cursor-pointer transition-colors ${selectedLevels.includes('WARN') || selectedLevels.length === 0 ? 'bg-[#451a03]/80 text-[#fdba74] border-[#78350f]' : 'bg-[#11151c] text-[#8b949e] border-[#2d333b] hover:border-white/30'}`}>
+              <div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] mr-2"></div>WARN
             </div>
             <div 
-               onClick={() => setSelectedLevel(selectedLevel === 'INFO' ? null : 'INFO')}
-               className={`px-3 py-1.5 border rounded text-xs font-mono flex items-center cursor-pointer transition-colors ${selectedLevel === 'INFO' || !selectedLevel ? 'bg-[#1c212b] text-[#c9d1d9] border-[#2d333b]' : 'bg-[#11151c] text-[#8b949e] border-white/10 hover:border-white/30'}`}>
-               <div className="w-1.5 h-1.5 rounded-full bg-[#8b949e] mr-2"></div>INFO (340)
+               onClick={() => setSelectedLevels(prev => prev.includes('INFO') ? prev.filter(l => l !== 'INFO') : [...prev, 'INFO'])}
+               className={`px-3 py-1.5 border rounded text-xs font-mono flex items-center cursor-pointer transition-colors ${selectedLevels.includes('INFO') || selectedLevels.length === 0 ? 'bg-[#1c212b] text-[#c9d1d9] border-[#2d333b]' : 'bg-[#11151c] text-[#8b949e] border-[#2d333b] hover:border-white/30'}`}>
+               <div className="w-1.5 h-1.5 rounded-full bg-[#8b949e] mr-2"></div>INFO
             </div>
             <div 
-               onClick={() => setSelectedLevel(selectedLevel === 'DEBUG' ? null : 'DEBUG')}
-               className={`px-3 py-1.5 border rounded text-xs font-mono flex items-center cursor-pointer transition-colors ${selectedLevel === 'DEBUG' || !selectedLevel ? 'bg-[#083344]/80 text-[#67e8f9] border-[#164e63]' : 'bg-[#11151c] text-[#8b949e] border-white/10 hover:border-white/30'}`}>
-               <div className="w-1.5 h-1.5 rounded-full bg-[#06b6d4] mr-2"></div>DEBUG (41)
+               onClick={() => setSelectedLevels(prev => prev.includes('DEBUG') ? prev.filter(l => l !== 'DEBUG') : [...prev, 'DEBUG'])}
+               className={`px-3 py-1.5 border rounded text-xs font-mono flex items-center cursor-pointer transition-colors ${selectedLevels.includes('DEBUG') || selectedLevels.length === 0 ? 'bg-[#083344]/80 text-[#67e8f9] border-[#164e63]' : 'bg-[#11151c] text-[#8b949e] border-[#2d333b] hover:border-white/30'}`}>
+               <div className="w-1.5 h-1.5 rounded-full bg-[#06b6d4] mr-2"></div>DEBUG
             </div>
           </div>
         </div>
@@ -241,10 +241,10 @@ const Logs = () => {
           <div className="w-[15%]">Trace</div>
         </div>
 
-        {/* Table Body - Filtered by Level and Search Query manually simulating backend payload for now */}
+        {/* Table Body - Filtered by Levels and Search Query manually simulating backend payload for now */}
         <div className="flex-1 overflow-y-auto w-full no-scrollbar pb-4">
           {logs.filter(l => {
-             if (selectedLevel && l.level !== selectedLevel) return false;
+             if (selectedLevels.length > 0 && !selectedLevels.includes(l.level)) return false;
              if (searchQuery) {
                const q = searchQuery.toLowerCase();
                if (!l.message.toLowerCase().includes(q) && 
@@ -272,14 +272,23 @@ const Logs = () => {
               </div>
               <div className="w-[15%] flex justify-center">
                   {log.trace_id ? (
-                     <button 
-                        type="button"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTraceId(log.trace_id); }}
-                        className="inline-flex items-center space-x-1.5 text-[#a5b4fc] group cursor-pointer hover:bg-[#a5b4fc]/10 px-2 py-0.5 rounded transition-all"
-                     >
-                       <span className="font-mono text-xs border-b border-transparent group-hover:border-[#a5b4fc]">{log.trace_id.substring(0, 12)}...</span>
-                       <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                     </button>
+                     <div className="group flex items-center bg-[#1c212b] border border-[#2d333b] hover:border-[#818cf8] rounded overflow-hidden transition-all duration-200 shadow-sm relative">
+                       <button 
+                         className="px-2 py-1 flex items-center space-x-1.5 bg-transparent group-hover:bg-[#818cf8]/10 transition-colors z-10"
+                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTraceId(log.trace_id); }}
+                       >
+                         <span className="w-2 h-2 rounded-full bg-[#818cf8] shadow-[0_0_5px_#818cf8]"></span>
+                         <span className="font-mono text-[#a5b4fc] text-[10px] tracking-widest">{log.trace_id.substring(0, 8)}...</span>
+                         <ExternalLink className="w-3 h-3 text-[#c084fc] ml-1 opacity-100 group-hover:scale-110 transition-transform" />
+                       </button>
+                       <button 
+                         className="absolute right-0 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 translate-x-full h-full bg-[#818cf8] px-2 text-white transition-all z-20 flex items-center justify-center cursor-pointer border-l border-[#4f46e5]"
+                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(log.trace_id); }}
+                         title="Copy full trace id"
+                       >
+                         <Copy className="w-3 h-3" />
+                       </button>
+                     </div>
                   ) : (
                      <span className="text-[#4b5563] font-mono text-xs">--</span>
                   )}

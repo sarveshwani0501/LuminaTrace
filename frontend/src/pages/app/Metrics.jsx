@@ -17,6 +17,11 @@ const Metrics = () => {
   const [isTimeDropdownOpen, setIsTimeDropdownOpen] = useState(false);
   const [expandedDimension, setExpandedDimension] = useState('');
   
+  // Custom Tag Filter State
+  const [customTags, setCustomTags] = useState(['env:prod', 'region:us']);
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [newTagInput, setNewTagInput] = useState('');
+  
   // Data States
   const [latencyData, setLatencyData] = useState([]);
   const [throughputData, setThroughputData] = useState([]);
@@ -176,14 +181,14 @@ const Metrics = () => {
                     </linearGradient>
                   </defs>
                   <RechartsTooltip cursor={{stroke: '#374151', strokeWidth: 1, strokeDasharray: '4 4'}} content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="val" stroke="#c084fc" strokeWidth={3} fill="url(#purpleGrad)" />
+                  <Area isAnimationActive={false} type="monotone" dataKey="val" stroke="#c084fc" strokeWidth={3} fill="url(#purpleGrad)" />
                   <XAxis dataKey="time" hide />
                   <YAxis domain={['dataMin - 10', 'dataMax + 20']} hide />
                 </AreaChart>
               ) : (
                 <BarChart data={latencyData}>
                   <RechartsTooltip cursor={{fill: '#1c212b'}} content={<CustomTooltip />} />
-                  <Bar dataKey="val" fill="#c084fc" radius={[2,2,0,0]} />
+                  <Bar isAnimationActive={false} dataKey="val" fill="#c084fc" radius={[2,2,0,0]} />
                   <XAxis dataKey="time" hide />
                   <YAxis domain={['dataMin - 10', 'dataMax + 20']} hide />
                 </BarChart>
@@ -203,14 +208,14 @@ const Metrics = () => {
                     </linearGradient>
                   </defs>
                   <RechartsTooltip cursor={{stroke: '#374151', strokeWidth: 1, strokeDasharray: '4 4'}} content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="val" stroke="#22d3ee" strokeWidth={3} fill="url(#cyanGrad)" />
+                  <Area isAnimationActive={false} type="monotone" dataKey="val" stroke="#22d3ee" strokeWidth={3} fill="url(#cyanGrad)" />
                   <XAxis dataKey="time" hide />
                   <YAxis domain={['dataMin - 1', 'dataMax + 1']} hide />
                 </AreaChart>
                ) : (
                 <BarChart data={throughputData}>
                   <RechartsTooltip cursor={{fill: '#1c212b'}} content={<CustomTooltip />} />
-                  <Bar dataKey="val" fill="#22d3ee" radius={[2,2,0,0]} />
+                  <Bar isAnimationActive={false} dataKey="val" fill="#22d3ee" radius={[2,2,0,0]} />
                   <XAxis dataKey="time" hide />
                   <YAxis domain={['dataMin - 1', 'dataMax + 1']} hide />
                 </BarChart>
@@ -230,14 +235,14 @@ const Metrics = () => {
                     </linearGradient>
                   </defs>
                   <RechartsTooltip cursor={{stroke: '#374151', strokeWidth: 1, strokeDasharray: '4 4'}} content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="val" stroke="#fdba74" strokeWidth={3} fill="url(#amberGrad)" />
+                  <Area isAnimationActive={false} type="monotone" dataKey="val" stroke="#fdba74" strokeWidth={3} fill="url(#amberGrad)" />
                   <XAxis dataKey="time" hide />
                   <YAxis domain={[0, 'dataMax + 0.1']} hide />
                 </AreaChart>
                ) : (
                 <BarChart data={errorData}>
                   <RechartsTooltip cursor={{fill: '#1c212b'}} content={<CustomTooltip />} />
-                  <Bar dataKey="val" fill="#fdba74" radius={[2,2,0,0]} />
+                  <Bar isAnimationActive={false} dataKey="val" fill="#fdba74" radius={[2,2,0,0]} />
                   <XAxis dataKey="time" hide />
                   <YAxis domain={[0, 'dataMax + 0.1']} hide />
                 </BarChart>
@@ -257,14 +262,14 @@ const Metrics = () => {
               {visType === 'lines' ? (
                 <LineChart data={cpuData}>
                   <RechartsTooltip cursor={{stroke: '#374151', strokeWidth: 1, strokeDasharray: '4 4'}} content={<CustomTooltip />} />
-                  <Line type="linear" dataKey="val" stroke="#e2e8f0" strokeWidth={2} dot={false} />
+                  <Line isAnimationActive={false} type="linear" dataKey="val" stroke="#e2e8f0" strokeWidth={2} dot={false} />
                   <XAxis dataKey="time" hide />
                   <YAxis domain={[40, 100]} hide />
                 </LineChart>
               ) : (
                 <BarChart data={cpuData}>
                   <RechartsTooltip cursor={{fill: '#1c212b'}} content={<CustomTooltip />} />
-                  <Bar dataKey="val" fill="#e2e8f0" radius={[2,2,0,0]} />
+                  <Bar isAnimationActive={false} dataKey="val" fill="#e2e8f0" radius={[2,2,0,0]} />
                   <XAxis dataKey="time" hide />
                   <YAxis domain={[40, 100]} hide />
                 </BarChart>
@@ -294,14 +299,14 @@ const Metrics = () => {
                {visType === 'lines' ? (
                 <LineChart data={connectionsData}>
                   <RechartsTooltip cursor={{stroke: '#374151', strokeWidth: 1, strokeDasharray: '4 4'}} content={<CustomTooltip />} />
-                  <Line type="linear" dataKey="val" stroke="#2dd4bf" strokeWidth={2.5} strokeDasharray="4 6" dot={false} />
+                  <Line isAnimationActive={false} type="linear" dataKey="val" stroke="#2dd4bf" strokeWidth={2.5} strokeDasharray="4 6" dot={false} />
                   <XAxis dataKey="time" hide />
                   <YAxis domain={['dataMin - 5', 'dataMax + 5']} hide />
                 </LineChart>
                ) : (
                 <BarChart data={connectionsData}>
                   <RechartsTooltip cursor={{fill: '#1c212b'}} content={<CustomTooltip />} />
-                  <Bar dataKey="val" fill="#2dd4bf" radius={[2,2,0,0]} />
+                  <Bar isAnimationActive={false} dataKey="val" fill="#2dd4bf" radius={[2,2,0,0]} />
                   <XAxis dataKey="time" hide />
                   <YAxis domain={['dataMin - 5', 'dataMax + 5']} hide />
                 </BarChart>
@@ -360,18 +365,47 @@ const Metrics = () => {
           <div className="space-y-3">
             <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase">Custom Tags</span>
             <div className="flex flex-wrap gap-2">
-              <div className="flex items-center bg-[#1c212b] border border-[#2d333b] px-2 py-1 rounded text-xs text-[#c9d1d9] font-mono cursor-pointer hover:bg-accent-error/10 hover:text-accent-error hover:border-accent-error/30 transition-colors">
-                env:prod <span className="ml-2 opacity-50">×</span>
-              </div>
-              <div className="flex items-center bg-[#1c212b] border border-[#2d333b] px-2 py-1 rounded text-xs text-[#c9d1d9] font-mono cursor-pointer hover:bg-accent-error/10 hover:text-accent-error hover:border-accent-error/30 transition-colors">
-                region:us <span className="ml-2 opacity-50">×</span>
-              </div>
-              <div 
-                onClick={() => alert("Tag builder modal would open here!")}
-                className="flex items-center bg-transparent border border-dashed border-[#8b949e] px-2 py-1 rounded text-xs text-[#8b949e] font-mono cursor-pointer hover:border-white hover:text-white transition-colors"
+              
+              {customTags.map(tag => (
+                <div key={tag} className="flex items-center bg-[#1c212b] border border-[#2d333b] px-2 py-1 rounded text-xs text-[#c9d1d9] font-mono cursor-pointer hover:bg-accent-error/10 hover:text-accent-error hover:border-accent-error/30 transition-colors" onClick={() => setCustomTags(customTags.filter(t => t !== tag))}>
+                  {tag} <span className="ml-2 opacity-50 font-sans font-bold">×</span>
+                </div>
+              ))}
+
+              {isAddingTag ? (
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    // Enforce strict tag formatting stringency (e.g., key_123:value-abc.45)
+                    const isValid = /^[a-zA-Z0-9_]+:[a-zA-Z0-9_\-.]+$/.test(newTagInput);
+                    if (isValid && !customTags.includes(newTagInput)) {
+                      setCustomTags([...customTags, newTagInput]);
+                      setNewTagInput('');
+                      setIsAddingTag(false);
+                    } else if (!isValid) {
+                      alert("Invalid Format. Target must be generic key:value (no spaces or special chars).");
+                    }
+                  }}
                 >
-                + Add Tag
-              </div>
+                  <input 
+                    autoFocus
+                    type="text"
+                    placeholder="key:value"
+                    value={newTagInput}
+                    onChange={(e) => setNewTagInput(e.target.value)}
+                    onBlur={() => setIsAddingTag(false)}
+                    className="bg-[#0a0c10] border border-[#818cf8] px-2 py-1 flex items-center rounded text-xs text-white font-mono focus:outline-none w-28"
+                  />
+                </form>
+              ) : (
+                <div 
+                  onClick={() => setIsAddingTag(true)}
+                  className="flex items-center bg-transparent border border-dashed border-[#8b949e] px-2 py-1 rounded text-xs text-[#8b949e] font-mono cursor-pointer hover:border-white hover:text-white transition-colors"
+                >
+                  + Add Filter
+                </div>
+              )}
+              
             </div>
           </div>
 
