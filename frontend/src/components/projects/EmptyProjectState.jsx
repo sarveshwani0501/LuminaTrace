@@ -1,71 +1,23 @@
 import React, { useState } from 'react';
 import { Activity, Plus, Server, Code } from 'lucide-react';
 import Button from '../ui/Button';
-import Input from '../ui/Input';
-import { Card, CardContent } from '../ui/Card';
+import CreateProjectModal from './CreateProjectModal';
 
 const EmptyProjectState = ({ onCreate }) => {
   const [isCreating, setIsCreating] = useState(false);
-  const [formData, setFormData] = useState({ name: '', description: '' });
-  const [errors, setErrors] = useState({});
-
-  const validate = () => {
-    const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Project name is required';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (validate()) {
-      onCreate(formData);
-    }
-  };
 
   if (isCreating) {
     return (
-      <Card className="w-full max-w-2xl mx-auto mt-20 relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-primary/10 blur-[100px] rounded-full pointer-events-none"></div>
-        <CardContent className="pt-8 relative z-10">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="w-10 h-10 rounded-lg bg-surface-active flex items-center justify-center border border-border-light">
-              <Server className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-text-primary">Create New Project</h2>
-              <p className="text-sm text-text-secondary">Set up an environment to receive telemetry data.</p>
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-text-primary">Project Name <span className="text-accent-error">*</span></label>
-              <Input 
-                autoFocus
-                placeholder="e.g., Production API Database"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                error={errors.name}
-              />
-            </div>
-            
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-text-primary">Description (Optional)</label>
-              <Input 
-                placeholder="Microservice that handles user checkouts"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </div>
-
-            <div className="flex space-x-3 pt-4 border-t border-border mt-6">
-              <Button type="submit" className="w-full sm:w-auto">Generate API Key</Button>
-              <Button type="button" variant="ghost" onClick={() => setIsCreating(false)}>Cancel</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+       <div className="h-full flex flex-col items-center justify-center p-20">
+          <CreateProjectModal 
+             onClose={() => setIsCreating(false)} 
+             currentOrg={{ name: 'Current Organization' }}
+             onSuccess={(data) => {
+                setIsCreating(false);
+                if(onCreate) onCreate(data);
+             }}
+          />
+       </div>
     );
   }
 
