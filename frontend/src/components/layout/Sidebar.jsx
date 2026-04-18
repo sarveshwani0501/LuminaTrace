@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Terminal, Activity, Bell, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Terminal, Activity, Bell, Settings, ServerIcon, LogOut, ChevronDown } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { logoutUser } from '../../store/slices/authSlice';
 
@@ -22,6 +22,7 @@ const Sidebar = () => {
     { name: 'Metrics', icon: Activity, path: '/app/metrics' },
     { name: 'Logs', icon: Terminal, path: '/app/logs' },
     { name: 'Alerts', icon: Bell, path: '/app/alerts' },
+    { name: 'Servers', icon: ServerIcon, path: '/app/servers' },
     { name: 'Settings', icon: Settings, path: '/app/settings' },
   ];
 

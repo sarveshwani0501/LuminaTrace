@@ -13,6 +13,7 @@ import Dashboard from './pages/app/Dashboard';
 import Metrics from './pages/app/Metrics';
 import Logs from './pages/app/Logs';
 import Alerts from './pages/app/Alerts';
+import Servers from './pages/app/Servers';
 import Settings from './pages/app/Settings';
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
           <Route path="metrics" element={<Metrics />} />
           <Route path="logs" element={<Logs />} />
           <Route path="alerts" element={<Alerts />} />
+          <Route path="servers" element={<Servers />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
