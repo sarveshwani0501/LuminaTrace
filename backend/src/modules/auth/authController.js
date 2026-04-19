@@ -127,7 +127,7 @@ export function authController(fastify) {
   async function verifyOTPForEmailVerificationHandler(req, reply) {
     try{
       const {email, otp} = req.body;
-      const {message, user} = await verifyOTPForEmailVerification(email, otp);
+      const {message, user, orgList} = await verifyOTPForEmailVerification(email, otp);
 
       const token = fastify.jwt.sign(
         { userId: user.id, email: user.email },
@@ -136,7 +136,7 @@ export function authController(fastify) {
 
       reply.setAuthCookie(token);
 
-      return reply.code(200).send({ message });
+      return reply.code(200).send({ message, user, organizations: orgList });
     }catch(error){
       if(error.message === "Invalid OTP" || error.message === "OTP expired"){
         return reply.code(400).send({

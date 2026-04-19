@@ -179,7 +179,9 @@ export async function verifyOTPForEmailVerification(email, otp) {
   
   await updateEmailVerificationStatus(email);
 
-  return { message: 'OTP verified successfully', user };
+  const orgList = await getUserOrganizations(user.id);
+
+  return { message: 'OTP verified successfully', user, orgList };
 }
 
 
