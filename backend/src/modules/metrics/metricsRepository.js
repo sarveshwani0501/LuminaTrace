@@ -189,8 +189,65 @@ export async function getMetricTimeSeriesP99(
     console.error("Error fetching metrics time-series:", error);
     throw new Error(`Failed to fetch metrics: ${error.message}`);
   }
+}export async function getMetricThroughput(projectId, interval, from, to, serverId = null) {
+  try {
+    // RPS = total requests in bucket / seconds in that bucket window
+    const serverFilter = serverId ? 'AND server_id = $6' : '';
+    const params = serverId
+      ? [interval, projectId, from, to, serverId]
+      : [interval, projectId, from, to];
+
+    const query = `
+      SELECT
+        time_bucket($1, time) AS time_bucket,
+        SUM(value) / EXTRACT(EPOCH FROM $1::interval) AS avg_value
+      FROM metrics
+      WHERE project_id = $2
+        AND time >= $3
+        AND time <= $4
+        AND metric_name = 'request_count'
+        ${serverFilter}
+      GROUP BY time_bucket
+      ORDER BY time_bucket DESC`;
+
+    const res = await pool.query(query, params);
+    return res.rows || [];
+  } catch (error) {
+    console.error('Error fetching throughput:', error);
+    throw new Error(`Failed to fetch throughput: ${error.message}`);
+  }
 }
 
+export async function getMetricErrorRate(projectId, interval, from, to, serverId = null) {
+  try {
+    // Error rate = (error_count / request_count) * 100 per time bucket
+    const serverFilter = serverId ? 'AND server_id = $6' : '';
+    const params = serverId
+      ? [interval, projectId, from, to, serverId]
+      : [interval, projectId, from, to];
+
+    const query = `
+      SELECT
+        time_bucket($1, time) AS time_bucket,
+        SUM(CASE WHEN metric_name = 'error_count' THEN value ELSE 0 END)
+          / NULLIF(SUM(CASE WHEN metric_name = 'request_count' THEN value ELSE 0 END), 0)
+          * 100 AS avg_value
+      FROM metrics
+      WHERE project_id = $2
+        AND time >= $3
+        AND time <= $4
+        AND metric_name IN ('error_count', 'request_count')
+        ${serverFilter}
+      GROUP BY time_bucket
+      ORDER BY time_bucket DESC`;
+
+    const res = await pool.query(query, params);
+    return res.rows || [];
+  } catch (error) {
+    console.error('Error fetching error rate:', error);
+    throw new Error(`Failed to fetch error rate: ${error.message}`);
+  }
+}
 
 
 

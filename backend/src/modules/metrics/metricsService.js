@@ -7,7 +7,9 @@ import {
   getMetricTimeSeries,
   getLatestMetricsFromDB,
   getLatestMetricsFromRedis,
-  getMetricTimeSeriesP99
+  getMetricTimeSeriesP99,
+  getMetricThroughput,
+  getMetricErrorRate,
 } from "./metricsRepository.js";
 import {
   parseTimeRange,
@@ -107,20 +109,14 @@ export async function getLatestMetrics(projectId, serverId = null) {
       throw new Error("Project ID is required");
     }
 
-    // If serverId provided, get specific server metrics from DB
     if (serverId) {
       const dbData = await getLatestMetricsFromDB(projectId, serverId);
-      return {
-        metrics: dbData,
-        source: "database",
-      };
+      return { metrics: dbData, source: "database" };
     }
 
-    // Try Redis first for aggregated project metrics
     const redisData = await getLatestMetricsFromRedis(projectId);
 
     if (Object.keys(redisData).length > 0) {
-      // Transform Redis hash into array format for consistency
       const metricsArray = Object.keys(redisData).map((name) => ({
         name,
         value: redisData[name],
@@ -131,23 +127,43 @@ export async function getLatestMetrics(projectId, serverId = null) {
         server_hostname: null,
         server_environment: null,
       }));
-      return {
-        metrics: metricsArray,
-        source: "redis",
-      };
+      return { metrics: metricsArray, source: "redis" };
     }
 
-    // Fallback to DB
     const dbData = await getLatestMetricsFromDB(projectId);
-    return {
-      metrics: dbData,
-      source: "database",
-    };
+    return { metrics: dbData, source: "database" };
   } catch (err) {
     console.log("Error", { err });
-    throw {
-      statusCode: 500,
-      message: `Internal Server Error ${err}`,
-    };
+    throw { statusCode: 500, message: `Internal Server Error ${err}` };
+  }
+}
+
+export async function getTimeseriesThroughput(projectId, timerange, serverId = null) {
+  try {
+    if (!projectId) throw new Error("Project ID is required");
+    if (!timerange) timerange = "1h";
+
+    const { from, to } = parseTimeRange(timerange);
+    const interval = getIntervalForWindow(timerange);
+    const data = await getMetricThroughput(projectId, interval, from, to, serverId);
+
+    return { data, metric_name: 'throughput_rps', interval, from, to, aggregation: 'rps' };
+  } catch (err) {
+    throw { statusCode: 500, message: `Internal Server Error ${err}` };
+  }
+}
+
+export async function getTimeseriesErrorRate(projectId, timerange, serverId = null) {
+  try {
+    if (!projectId) throw new Error("Project ID is required");
+    if (!timerange) timerange = "1h";
+
+    const { from, to } = parseTimeRange(timerange);
+    const interval = getIntervalForWindow(timerange);
+    const data = await getMetricErrorRate(projectId, interval, from, to, serverId);
+
+    return { data, metric_name: 'error_rate_percent', interval, from, to, aggregation: 'ratio' };
+  } catch (err) {
+    throw { statusCode: 500, message: `Internal Server Error ${err}` };
   }
 }
