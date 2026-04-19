@@ -3,11 +3,11 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Terminal, Activity, Bell, Settings, ServerIcon, LogOut, ChevronDown } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { logoutUser } from '../../store/slices/authSlice';
+import { setCurrentProject } from '../../store/slices/projectSlice';
 import { useState } from 'react';
 import CreateOrgModal from '../projects/CreateOrgModal';
-import CreateProjectModal from '../projects/CreateProjectModal';
 
-const Sidebar = () => {
+const Sidebar = ({ onCreateProject }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
@@ -17,23 +17,12 @@ const Sidebar = () => {
 
   const [isOrgDropdownOpen, setIsOrgDropdownOpen] = useState(false);
   const [isProjDropdownOpen, setIsProjDropdownOpen] = useState(false);
-  
   const [isCreateOrgModalOpen, setIsCreateOrgModalOpen] = useState(false);
-  const [isCreateProjModalOpen, setIsCreateProjModalOpen] = useState(false);
 
-  // Mock multi-tenant data with roles
-  const availableOrgs = [
-    { id: 'org_1', name: 'Nebula Corp', owner_id: 'usr_mock' },
-    { id: 'org_2', name: 'Stark Industries', owner_id: 'usr_different' }
-  ];
+  const availableOrgs = useSelector(state => state.org.list) || [];
+  const availableProjects = useSelector(state => state.project.list) || [];
   
-  const currentUserId = user ? user.id : 'usr_mock';
-  const userOwnsAnOrg = availableOrgs.some(org => org.owner_id === currentUserId);
-  
-  const availableProjects = [
-    { id: 'proj_1', name: 'Project Alpha' },
-    { id: 'proj_2', name: 'Edge Gateway v2' }
-  ];
+  const userOwnsAnOrg = availableOrgs.some(o => o.role === 'owner');
 
   const handleLogout = () => {
     dispatch(logoutUser());
@@ -67,7 +56,7 @@ const Sidebar = () => {
                   </span>
                 </div>
                 <span className="font-semibold text-text-primary truncate max-w-[120px]">
-                  {currentOrg ? currentOrg.name : 'Nebula Corp'}
+                  {currentOrg ? currentOrg.name : 'No Organization'}
                 </span>
               </div>
               <ChevronDown className={`w-4 h-4 text-text-muted flex-shrink-0 ml-2 transition-transform ${isOrgDropdownOpen ? 'rotate-180' : ''}`} />
@@ -76,28 +65,28 @@ const Sidebar = () => {
           
           {isOrgDropdownOpen && (
             <div className="absolute top-16 left-2 w-[calc(100%-16px)] bg-background border border-border shadow-lg rounded-lg overflow-hidden py-1 z-50">
-               {availableOrgs.map(org => {
-                 const isOwner = org.owner_id === currentUserId;
-                 return (
-                   <div key={org.id} onClick={() => setIsOrgDropdownOpen(false)} className="px-4 py-2 hover:bg-surface-active cursor-pointer flex items-center justify-between transition-colors">
-                      <div className="flex items-center overflow-hidden">
-                         <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center border border-primary/20 mr-3 shrink-0">
-                            <span className="text-primary text-xs font-bold">{org.name.charAt(0)}</span>
-                         </div>
-                         <span className="text-sm font-medium text-text-primary truncate pr-2">{org.name}</span>
+              {availableOrgs.map(org => {
+                const isOwner = org.role === 'owner';
+                return (
+                  <div key={org.id} onClick={() => setIsOrgDropdownOpen(false)} className="px-4 py-2 hover:bg-surface-active cursor-pointer flex items-center justify-between transition-colors">
+                    <div className="flex items-center overflow-hidden">
+                      <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center border border-primary/20 mr-3 shrink-0">
+                        <span className="text-primary text-xs font-bold">{org.name.charAt(0)}</span>
                       </div>
-                      {isOwner && <span className="text-[9px] font-mono font-bold tracking-widest text-[#10b981] bg-[#064e3b] px-1.5 py-0.5 rounded border border-[#065f46] shrink-0">OWNER</span>}
-                   </div>
-                 );
-               })}
-               {!userOwnsAnOrg && (
-                 <div 
-                   onClick={() => { setIsOrgDropdownOpen(false); setIsCreateOrgModalOpen(true); }}
-                   className="border-t border-border mt-1 px-4 py-2 hover:bg-surface-active cursor-pointer text-xs font-medium text-primary flex items-center"
-                 >
-                   + Create Organization
-                 </div>
-               )}
+                      <span className="text-sm font-medium text-text-primary truncate pr-2">{org.name}</span>
+                    </div>
+                    {isOwner && <span className="text-[9px] font-mono font-bold tracking-widest text-[#10b981] bg-[#064e3b] px-1.5 py-0.5 rounded border border-[#065f46] shrink-0">OWNER</span>}
+                  </div>
+                );
+              })}
+              {!userOwnsAnOrg && (
+                <div 
+                  onClick={() => { setIsOrgDropdownOpen(false); setIsCreateOrgModalOpen(true); }}
+                  className="border-t border-border mt-1 px-4 py-2 hover:bg-surface-active cursor-pointer text-xs font-medium text-primary flex items-center"
+                >
+                  + Create Organization
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -110,26 +99,31 @@ const Sidebar = () => {
             className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg bg-background border cursor-pointer transition-colors ${isProjDropdownOpen ? 'border-primary/50 bg-surface-active' : 'border-border hover:border-primary/50 hover:bg-surface-active'}`}
           >
             <span className="text-sm font-medium text-text-primary truncate flex-1">
-              {currentProject ? currentProject.name : 'Project Alpha'}
+              {currentProject ? currentProject.name : 'No Workspace'}
             </span>
             <ChevronDown className={`w-4 h-4 text-text-muted flex-shrink-0 ml-2 transition-transform ${isProjDropdownOpen ? 'rotate-180' : ''}`} />
           </div>
 
           {isProjDropdownOpen && (
-             <div className="absolute top-[72px] left-4 w-[calc(100%-32px)] bg-background border border-border shadow-lg rounded-lg overflow-hidden py-1 z-50">
-               {availableProjects.map(proj => (
-                 <div key={proj.id} onClick={() => setIsProjDropdownOpen(false)} className="px-3 py-2 hover:bg-surface-active cursor-pointer flex items-center transition-colors">
-                    <div className="w-2 h-2 rounded-full bg-primary/60 mr-2 shrink-0"></div>
-                    <span className="text-sm text-text-secondary hover:text-text-primary truncate">{proj.name}</span>
-                 </div>
-               ))}
-               <div 
-                 onClick={() => { setIsProjDropdownOpen(false); setIsCreateProjModalOpen(true); }}
-                 className="border-t border-border mt-1 px-3 py-2 hover:bg-surface-active cursor-pointer text-xs font-medium text-primary flex items-center"
-               >
-                 + New Workspace
-               </div>
-             </div>
+            <div className="absolute top-[72px] left-4 w-[calc(100%-32px)] bg-background border border-border shadow-lg rounded-lg overflow-hidden py-1 z-50">
+              {availableProjects.map(proj => (
+                <div 
+                  key={proj.id} 
+                  onClick={() => { dispatch(setCurrentProject(proj)); setIsProjDropdownOpen(false); }} 
+                  className={`px-3 py-2 hover:bg-surface-active cursor-pointer flex items-center transition-colors ${currentProject?.id === proj.id ? 'bg-primary/10' : ''}`}
+                >
+                  <div className={`w-2 h-2 rounded-full mr-2 shrink-0 ${currentProject?.id === proj.id ? 'bg-primary' : 'bg-primary/40'}`}></div>
+                  <span className="text-sm text-text-secondary hover:text-text-primary truncate">{proj.name}</span>
+                  {currentProject?.id === proj.id && <span className="ml-auto text-[9px] text-primary font-mono">active</span>}
+                </div>
+              ))}
+              <div 
+                onClick={() => { setIsProjDropdownOpen(false); onCreateProject?.(); }}
+                className="border-t border-border mt-1 px-3 py-2 hover:bg-surface-active cursor-pointer text-xs font-medium text-primary flex items-center"
+              >
+                + New Workspace
+              </div>
+            </div>
           )}
         </div>
 
@@ -166,10 +160,10 @@ const Sidebar = () => {
             </div>
             <div className="ml-3 flex flex-col flex-1 overflow-hidden">
               <span className="text-sm font-medium text-text-primary truncate">
-                {user ? user.full_name : 'Guest Mod'}
+                {user ? user.full_name : 'Guest'}
               </span>
               <span className="text-xs text-text-muted truncate">
-                {user ? user.email : 'guest@company.com'}
+                {user ? user.email : ''}
               </span>
             </div>
           </div>
@@ -187,21 +181,7 @@ const Sidebar = () => {
       {isCreateOrgModalOpen && (
         <CreateOrgModal 
           onClose={() => setIsCreateOrgModalOpen(false)} 
-          onSuccess={(orgData) => {
-            console.log("Mock attached new org to UI:", orgData);
-            setIsCreateOrgModalOpen(false);
-          }} 
-        />
-      )}
-
-      {isCreateProjModalOpen && (
-        <CreateProjectModal 
-          onClose={() => setIsCreateProjModalOpen(false)} 
-          currentOrg={{ name: 'Nebula Corp' }}
-          onSuccess={(projData) => {
-            console.log("Mock attached new project to UI:", projData);
-            setIsCreateProjModalOpen(false);
-          }} 
+          onSuccess={() => setIsCreateOrgModalOpen(false)} 
         />
       )}
     </aside>

@@ -1,18 +1,16 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { projectApi } from '../../api/project';
 
 export const fetchProjects = createAsyncThunk(
   'project/fetchProjects',
   async (orgId, { rejectWithValue }) => {
     try {
       if (!orgId) throw new Error("Organization ID is required");
-      // Simulate API call scoped to an Organization
-      await new Promise(resolve => setTimeout(resolve, 800));
-      return [
-        { id: 'proj_1', name: 'Frontend React App', apiKey: 'lumina_pk_xxxx1', platform: 'browser' },
-        { id: 'proj_2', name: 'Backend Fastify API', apiKey: 'lumina_pk_xxxx2', platform: 'node' }
-      ];
+      const response = await projectApi.getProjects(orgId);
+      // Backend returns raw array directly, not wrapped in { projects: [] }
+      return Array.isArray(response.data) ? response.data : (response.data.projects || []);
     } catch (error) {
-      return rejectWithValue(error.message || 'Failed to fetch projects');
+      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to fetch projects');
     }
   }
 );
@@ -22,18 +20,11 @@ export const createProject = createAsyncThunk(
   async ({ orgId, projectData }, { rejectWithValue }) => {
     try {
       if (!orgId) throw new Error("Organization ID is required");
-      // Simulate API call to /orgs/:orgId/projects
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return { 
-        id: `proj_${Math.random().toString(36).substring(7)}`, 
-        name: projectData.name, 
-        description: projectData.description || '',
-        api_key: `lumina_pk_${Math.random().toString(36).substring(2)}`,
-        retention_days: 30,
-        created_at: new Date().toISOString()
-      };
+      const response = await projectApi.createProject(orgId, projectData);
+      // Backend returns the project object directly (with plaintext api_key one-time)
+      return response.data;
     } catch (error) {
-      return rejectWithValue(error.message || 'Failed to create project');
+      return rejectWithValue(error.response?.data?.message || 'Failed to create project');
     }
   }
 );
@@ -50,12 +41,17 @@ const projectSlice = createSlice({
   initialState,
   reducers: {
     setCurrentProject: (state, action) => {
-      // Switches the active project Context
-      const selected = state.list.find(p => p.id === action.payload || p.id === action.payload.id);
-      if (selected) {
-        state.currentProject = selected;
-      } else if (action.payload === null) {
+      const payload = action.payload;
+      if (!payload) {
         state.currentProject = null;
+        return;
+      }
+      // Accept either a full project object or a string ID
+      if (typeof payload === 'object' && payload.id) {
+        state.currentProject = payload;
+      } else {
+        const found = state.list.find(p => p.id === payload);
+        if (found) state.currentProject = found;
       }
     },
     clearProjectError: (state) => {
@@ -93,8 +89,9 @@ const projectSlice = createSlice({
       .addCase(createProject.fulfilled, (state, action) => {
         state.isLoading = false;
         state.list.push(action.payload);
-        // Switch to the newly created project
-        state.currentProject = action.payload;
+        // NOTE: Do NOT auto-select the project here.
+        // The CreateProjectModal controls this — it shows the one-time API key first,
+        // then dispatches setCurrentProject only after the user confirms they've saved it.
       })
       .addCase(createProject.rejected, (state, action) => {
         state.isLoading = false;

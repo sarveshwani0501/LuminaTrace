@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { AreaChart, Area, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis } from 'recharts';
-import { AlertCircle, Clock, Server, Activity, TerminalSquare, Route } from 'lucide-react';
+import { AlertCircle, Clock, Server, Activity, TerminalSquare, Route, BarChart2, Inbox } from 'lucide-react';
 import { metricsApi } from '../../api/metrics';
 import { logsApi } from '../../api/logs';
 import { serversApi } from '../../api/servers';
@@ -23,7 +23,7 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Bypass Redux null state for UI preview purposes
-  const uiProject = currentProject || { id: 'mock-alpha', name: 'Project Alpha' };
+  const uiProject = currentProject;
 
   useEffect(() => {
     if (!uiProject?.id) return;
@@ -31,45 +31,49 @@ const Dashboard = () => {
     const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-        // --- MOCK DATA FOR UI PREVIEW ---
-        setStats({
-          errors: "1.2k",
-          avgLatency: "124",
-          activeServers: 42,
-          cpuLoad: "84.2",
-          memoryLoad: "61.5"
-        });
-
-        setLiveLogs([
-          { timestamp: new Date().toISOString(), level: 'INFO', message: 'Inbound GET /api/v2/user/profile from 10.0.4.122' },
-          { timestamp: new Date(Date.now() - 1000).toISOString(), level: 'INFO', message: 'Cache hit for uid:9021 in Redis Cluster-01' },
-          { timestamp: new Date(Date.now() - 3000).toISOString(), level: 'WARN', message: 'Degraded performance in db-connector: 450ms wait' },
-          { timestamp: new Date(Date.now() - 4000).toISOString(), level: 'INFO', message: 'Successful auth for token: sha256_...88a' },
-          { timestamp: new Date(Date.now() - 6000).toISOString(), level: 'ERROR', message: 'Unhandled rejection: ECONNRESET at socket_02' },
-          { timestamp: new Date(Date.now() - 7000).toISOString(), level: 'INFO', message: 'Retry attempt 1/3 for downstream service' },
-          { timestamp: new Date(Date.now() - 9000).toISOString(), level: 'INFO', message: 'Payload dispatched to S3 bucket traces-raw-01' }
+        const [latestRes, cpuTimeRes, memTimeRes] = await Promise.all([
+          metricsApi.getLatestMetrics(uiProject.id),
+          metricsApi.getTimeseries(uiProject.id, 'cpu_usage', '1h'),
+          metricsApi.getTimeseries(uiProject.id, 'memory_used_percent', '1h')
         ]);
+
+        const metricsList = latestRes.data?.metrics || [];
         
-        setTopRoutes([
-          { path: 'gateway.request', count: '4.2k', latency: 124 },
-          { path: 'auth.validate', count: '2.1k', latency: 420 },
-          { path: 'user.data_fetch', count: '1.8k', latency: 160 },
-          { path: 'redis.get_session', count: 900, latency: 68 },
-          { path: 'response.serialize', count: 850, latency: 45 }
-        ]);
+        // Find specific metrics
+        const getMetricVal = (name) => {
+          const m = metricsList.find(x => x.name === name);
+          return m ? parseFloat(m.value) : 0;
+        };
 
-        // Sin/Cos waves to perfectly match the beautiful curved paths in the image
-        const mockChart = Array.from({length: 40}).map((_, i) => {
-          const d = new Date();
-          d.setMinutes(d.getMinutes() - (40 - i));
-          return {
-            time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            cpu: (Math.sin(i / 5) * 30 + 55).toFixed(2),
-            memory: (Math.cos(i / 3) * 20 + 40).toFixed(2),
-          }
+        setStats(prev => ({
+          ...prev,
+          avgLatency: getMetricVal('response_time').toFixed(0),
+          cpuLoad: getMetricVal('cpu_usage').toFixed(1),
+          memoryLoad: getMetricVal('memory_used_percent').toFixed(1)
+        }));
+
+        // Zip timeseries arrays for Recharts
+        const cpuData = cpuTimeRes.data?.data || [];
+        const memData = memTimeRes.data?.data || [];
+       
+        // We assume buckets align, but practically we should index them
+        const timeMap = {};
+        
+        cpuData.forEach(d => {
+           const timeStr = new Date(d.time_bucket).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+           timeMap[timeStr] = { time: timeStr, cpu: parseFloat(d.avg_value || d.value).toFixed(2), memory: 0 };
         });
-        setChartData(mockChart);
-        // --- END MOCK DATA ---
+
+        memData.forEach(d => {
+           const timeStr = new Date(d.time_bucket).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+           if (!timeMap[timeStr]) timeMap[timeStr] = { time: timeStr, cpu: 0 };
+           timeMap[timeStr].memory = parseFloat(d.avg_value || d.value).toFixed(2);
+        });
+
+        const mergedChart = Object.values(timeMap).sort((a,b) => a.time.localeCompare(b.time));
+        setChartData(mergedChart);
+        
+        // Note: For Top Routes & Total Errors, those could be aggregated or pulled from Postgres when that analytics query is integrated.
 
       } catch (err) {
         console.error("Failed to load dashboard data", err);
@@ -256,24 +260,34 @@ const Dashboard = () => {
         </div>
         
         <div className="h-[280px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#818cf8" stopOpacity={0.3}/> {/* Primary color mapped */}
-                  <stop offset="95%" stopColor="#818cf8" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="colorMem" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3}/> {/* Secondary color mapped */}
-                  <stop offset="95%" stopColor="#38bdf8" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="time" hide />
-              <RechartsTooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
-              <Area isAnimationActive={false} type="monotone" dataKey="cpu" stroke="#818cf8" strokeWidth={3} fillOpacity={1} fill="url(#colorCpu)" activeDot={{ r: 6, fill: '#818cf8', stroke: '#111827', strokeWidth: 2 }} />
-              <Area isAnimationActive={false} type="monotone" dataKey="memory" stroke="#38bdf8" strokeWidth={3} fillOpacity={1} fill="url(#colorMem)" activeDot={{ r: 6, fill: '#38bdf8', stroke: '#111827', strokeWidth: 2 }} />
-            </AreaChart>
-          </ResponsiveContainer>
+          {chartData.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center">
+              <BarChart2 className="w-10 h-10 text-border mb-3" />
+              <p className="text-sm font-medium text-text-muted">No telemetry data yet</p>
+              <p className="text-xs text-text-muted/60 mt-1 max-w-xs">
+                Send metrics from your servers using your API key to see CPU &amp; memory usage here.
+              </p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#818cf8" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#818cf8" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorMem" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#38bdf8" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="time" hide />
+                <RechartsTooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} />
+                <Area isAnimationActive={false} type="monotone" dataKey="cpu" stroke="#818cf8" strokeWidth={3} fillOpacity={1} fill="url(#colorCpu)" activeDot={{ r: 6, fill: '#818cf8', stroke: '#111827', strokeWidth: 2 }} />
+                <Area isAnimationActive={false} type="monotone" dataKey="memory" stroke="#38bdf8" strokeWidth={3} fillOpacity={1} fill="url(#colorMem)" activeDot={{ r: 6, fill: '#38bdf8', stroke: '#111827', strokeWidth: 2 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
@@ -299,24 +313,30 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="p-4 flex-1 overflow-y-auto font-mono text-[11px] leading-relaxed space-y-2">
-            {liveLogs.map((log, index) => {
-              // Extract timestamp string cleanly
-              const timeStr = typeof log.timestamp === 'string' ? log.timestamp.split('T')[1]?.substring(0,8) : new Date(log.timestamp).toLocaleTimeString();
-              
-              return (
-                <div key={index} className="flex space-x-3 items-start break-all">
-                  <span className="text-text-muted shrink-0 w-16">{timeStr}</span>
-                  <span className="shrink-0 w-14">{renderLogLevel(log.level)}</span>
-                  <span className={`text-text-primary flex-1 ${log.level === 'ERROR' ? 'text-accent-error bg-accent-error/5 p-1 -m-1 rounded leading-tight' : ''}`}>
-                    {log.message}
-                  </span>
-                </div>
-              )
-            })}
-            {/* Live indicator block */}
-            <div className="flex space-x-3 items-center pt-2 blink opacity-50">
-               <span className="w-1.5 h-4 bg-primary animate-pulse"></span>
-               <span className="text-text-muted italic text-[10px]">Listening for events...</span>
+            {liveLogs.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center py-8">
+                <Inbox className="w-8 h-8 text-border mb-3" />
+                <p className="text-xs text-text-muted">No events yet</p>
+                <p className="text-[10px] text-text-muted/50 mt-1">Waiting for live log events from your servers...</p>
+              </div>
+            ) : (
+              liveLogs.map((log, index) => {
+                const timeStr = typeof log.timestamp === 'string' ? log.timestamp.split('T')[1]?.substring(0,8) : new Date(log.timestamp).toLocaleTimeString();
+                return (
+                  <div key={index} className="flex space-x-3 items-start break-all">
+                    <span className="text-text-muted shrink-0 w-16">{timeStr}</span>
+                    <span className="shrink-0 w-14">{renderLogLevel(log.level)}</span>
+                    <span className={`text-text-primary flex-1 ${log.level === 'ERROR' ? 'text-accent-error bg-accent-error/5 p-1 -m-1 rounded leading-tight' : ''}`}>
+                      {log.message}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+            {/* Live indicator */}
+            <div className="flex space-x-3 items-center pt-2 opacity-50">
+              <span className="w-1.5 h-4 bg-primary animate-pulse"></span>
+              <span className="text-text-muted italic text-[10px]">Listening for events...</span>
             </div>
           </div>
         </div>
@@ -332,25 +352,34 @@ const Dashboard = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-5 pr-2">
-            {topRoutes.map((route, i) => {
-              const maxLatency = 700; // Mock upper bound for progress bar visual
-              const percent = Math.min((route.latency / maxLatency) * 100, 100);
-              
-              return (
-                <div key={i} className="group">
-                  <div className="flex justify-between font-mono text-[10px] mb-1.5">
-                    <span className="text-text-secondary truncate pr-4">{route.path || route.route}</span>
-                    <span className="text-text-muted whitespace-nowrap">{route.latency}ms - <span className="text-primary">{route.count} reqs</span></span>
+            {topRoutes.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center py-8">
+                <Route className="w-8 h-8 text-border mb-3" />
+                <p className="text-sm font-medium text-text-muted">No route data yet</p>
+                <p className="text-xs text-text-muted/60 mt-1 max-w-xs">
+                  API endpoint latency will appear here once your services start sending traces.
+                </p>
+              </div>
+            ) : (
+              topRoutes.map((route, i) => {
+                const maxLatency = 700;
+                const percent = Math.min((route.latency / maxLatency) * 100, 100);
+                return (
+                  <div key={i} className="group">
+                    <div className="flex justify-between font-mono text-[10px] mb-1.5">
+                      <span className="text-text-secondary truncate pr-4">{route.path || route.route}</span>
+                      <span className="text-text-muted whitespace-nowrap">{route.latency}ms - <span className="text-primary">{route.count} reqs</span></span>
+                    </div>
+                    <div className="w-full bg-background rounded-full h-1">
+                      <div 
+                        className={`h-1 rounded-full ${route.latency > 400 ? 'bg-accent-error' : route.latency > 150 ? 'bg-accent-warning' : 'bg-primary'}`} 
+                        style={{ width: `${percent}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div className="w-full bg-background rounded-full h-1">
-                    <div 
-                      className={`h-1 rounded-full ${route.latency > 400 ? 'bg-accent-error' : route.latency > 150 ? 'bg-accent-warning' : 'bg-primary'}`} 
-                      style={{ width: `${percent}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 
