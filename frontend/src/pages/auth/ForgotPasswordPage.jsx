@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft, Timer } from 'lucide-react';
+import { authApi } from '../../api/auth';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -33,14 +34,11 @@ const ForgotPasswordPage = () => {
     setError(null);
 
     try {
-      // TODO: Implement actual Axios hit to /auth/password-reset/request
-      console.log('Requesting reset for: ', email);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+      await authApi.requestPasswordReset({ email });
       setIsSent(true);
       setTimeLeft(900); // reset timer if they submit again
     } catch (err) {
-      setError('Failed to send reset email. Please try again.');
+      setError(err.response?.data?.message || 'Failed to send reset email. Please try again.');
     } finally {
       setIsLoading(false);
     }

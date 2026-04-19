@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { loginUser } from '../../store/slices/authSlice';
 import { Activity } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -7,6 +9,7 @@ import { Card, CardContent } from '../../components/ui/Card';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [data, setData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -38,18 +41,12 @@ const LoginPage = () => {
     setIsLoading(true);
     
     try {
-      // TODO: Implement actual Axios API call to /auth/login
-      // const response = await api.post('/auth/login', data);
-      
-      console.log('Login Placeholder Triggered', data);
-      
-      // Simulate network request
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await dispatch(loginUser(data)).unwrap();
       
       // On success, redirect to app loop
-      // navigate('/app/dashboard');
+      navigate('/app/dashboard');
     } catch (err) {
-      setErrors({ global: 'Invalid email or password' });
+      setErrors({ global: err || 'Invalid email or password' });
     } finally {
       setIsLoading(false);
     }

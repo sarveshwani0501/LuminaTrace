@@ -1,22 +1,27 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-// import axios from 'axios';
+import { authApi } from '../../api/auth';
 
 
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async (credentials, { rejectWithValue }) => {
     try {
-      // const response = await axios.post('/api/auth/login', credentials);
-      // return response.data;
-      
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return { 
-        user: { id: '1', full_name: 'Test User', email: credentials.email },
-        organization: { id: 'org_1', name: 'Test Org' }
-      };
+      const response = await authApi.login(credentials);
+      return response.data; // Should return { user: ... } based on Fastify setup
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Login failed');
+      return rejectWithValue(error.response?.data?.message || error.response?.data?.error || 'Login failed');
+    }
+  }
+);
+
+export const signupUser = createAsyncThunk(
+  'auth/signupUser',
+  async (userData, { rejectWithValue }) => {
+    try {
+      const response = await authApi.signup(userData);
+      return response.data; 
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Signup failed');
     }
   }
 );
@@ -25,14 +30,10 @@ export const verifyOTP = createAsyncThunk(
   'auth/verifyOTP',
   async ({ email, otp }, { rejectWithValue }) => {
     try {
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return { 
-        user: { id: '1', full_name: 'Test User', email },
-        message: 'Verified successfully'
-      };
+      const response = await authApi.verifyEmail({ email, otp });
+      return response.data;
     } catch (error) {
-      return rejectWithValue('Invalid or expired OTP');
+      return rejectWithValue(error.response?.data?.message || 'Invalid or expired OTP');
     }
   }
 );
@@ -41,8 +42,7 @@ export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
   async (_, { rejectWithValue }) => {
     try {
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await authApi.logout();
       return true;
     } catch (error) {
       return rejectWithValue('Logout failed');
@@ -81,9 +81,22 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
-        state.user = action.payload.user;
+        state.user = action.payload.user || action.payload; // fallback if standard schema returns flat user block
       })
       .addCase(loginUser.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      // Signup User
+      .addCase(signupUser.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(signupUser.fulfilled, (state) => {
+        state.isLoading = false;
+        // Typically does not authenticate immediately without OTP, depending on schema, so we do nothing here except end loading
+      })
+      .addCase(signupUser.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })
@@ -96,7 +109,7 @@ const authSlice = createSlice({
       .addCase(verifyOTP.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
-        state.user = action.payload.user;
+        state.user = action.payload.user || action.payload;
       })
       .addCase(verifyOTP.rejected, (state, action) => {
         state.isLoading = false;

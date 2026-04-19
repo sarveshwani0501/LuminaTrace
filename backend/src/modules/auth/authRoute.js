@@ -9,7 +9,7 @@ import {
   resetPasswordSchema,
   changePasswordSchema
 } from "./authSchema.js";
-import { authenticate } from "../../middlewares/authenticate.js";
+import authenticate from "../../middlewares/authenticate.js";
 
 export default async function authRoutes(fastify) {
   const ctrl = authController(fastify);

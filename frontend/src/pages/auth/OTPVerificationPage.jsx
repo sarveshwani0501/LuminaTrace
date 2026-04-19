@@ -1,11 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { verifyOTP } from '../../store/slices/authSlice';
+import { authApi } from '../../api/auth';
 import { MailCheck } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { Card, CardContent } from '../../components/ui/Card';
 
 const OTPVerificationPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const location = useLocation();
   const email = location.state?.email || 'your email';
 
@@ -71,17 +75,22 @@ const OTPVerificationPage = () => {
     setError(null);
 
     try {
-      // TODO: Axios hit to /auth/verify-otp
-      console.log('Verifying OTP:', otpValue, 'for', email);
-      await new Promise(res => setTimeout(res, 1000));
-      
-      // On success, redirect to login or dashboard
+      await dispatch(verifyOTP({ email, otp: otpValue })).unwrap();
       navigate('/login');
     } catch (err) {
-      setError('Invalid or expired verification code');
+      setError(err || 'Invalid or expired verification code');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleResend = async () => {
+     try {
+        await authApi.sendVerificationEmail({ email });
+        alert('Verification email sent!');
+     } catch (err) {
+        alert(err.response?.data?.message || 'Failed to resend');
+     }
   };
 
   return (
@@ -131,7 +140,7 @@ const OTPVerificationPage = () => {
 
             <div className="text-center text-sm text-text-secondary">
               Didn't receive the code?{' '}
-              <button type="button" className="text-accent-success hover:text-white font-medium hover:underline">
+              <button type="button" onClick={handleResend} className="text-accent-success hover:text-white font-medium hover:underline">
                 Resend
               </button>
             </div>

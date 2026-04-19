@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { KeyRound, ShieldCheck } from 'lucide-react';
+import { authApi } from '../../api/auth';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -33,13 +34,10 @@ const ResetPasswordPage = () => {
     setIsLoading(true);
 
     try {
-      // TODO: Axios POST to /auth/password-reset/reset with { token, newPassword }
-      console.log('Resetting info: ', { token, newPassword: data.newPassword });
-      await new Promise(res => setTimeout(res, 1000));
-      
+      await authApi.resetPassword({ token, newPassword: data.newPassword });
       setIsSuccess(true);
     } catch (err) {
-      setErrors({ global: 'The token has expired or is invalid. Please request a new link.' });
+      setErrors({ global: err.response?.data?.message || 'The token has expired or is invalid. Please request a new link.' });
     } finally {
       setIsLoading(false);
     }

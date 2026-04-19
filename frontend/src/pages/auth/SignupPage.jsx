@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { signupUser } from '../../store/slices/authSlice';
 import { Target } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -7,6 +9,7 @@ import { Card, CardContent } from '../../components/ui/Card';
 
 const SignupPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [data, setData] = useState({ 
     full_name: '', 
     email: '', 
@@ -53,7 +56,6 @@ const SignupPage = () => {
     setIsLoading(true);
     
     try {
-      // Removing confirm_password before sending to backend to match schema
       const submitData = {
         full_name: data.full_name,
         email: data.email,
@@ -61,17 +63,12 @@ const SignupPage = () => {
         organization_name: data.organization_name
       };
 
-      // TODO: Implement actual Axios API call to /auth/signup
-      // const response = await api.post('/auth/signup', submitData);
-      
-      console.log('Signup Placeholder Triggered', submitData);
-      
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await dispatch(signupUser(submitData)).unwrap();
       
       // On success, redirect to OTP view and pass email via state
       navigate('/verify-otp', { state: { email: data.email } });
     } catch (err) {
-      setErrors({ global: 'Failed to create account. Email may already be in use.' });
+      setErrors({ global: err || 'Failed to create account. Email may already be in use.' });
     } finally {
       setIsLoading(false);
     }
