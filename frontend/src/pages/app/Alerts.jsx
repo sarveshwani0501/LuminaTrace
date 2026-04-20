@@ -1,31 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import { 
   Bell, CheckCircle2, AlertTriangle, Clock, Server, 
-  Trash2, Search, Filter, Plus, X, ChevronDown
+  Trash2, Search, Filter, Plus, X, ChevronDown, Inbox
 } from 'lucide-react';
-
-const mockEvents = [
-  { event_id: 'ev_1', metric_name: 'API Latency', condition: '>', threshold: 1000, triggered_value: 1420, status: 'firing', triggered_at: '2024-05-20T14:10:00Z', resolved_at: null, server_name: 'gateway-node-01', notification_email: 'ops@luminatrace.com' },
-  { event_id: 'ev_2', metric_name: 'CPU Usage', condition: '>', threshold: 85, triggered_value: 92.4, status: 'firing', triggered_at: '2024-05-20T13:45:00Z', resolved_at: null, server_name: 'auth-master-db', notification_email: 'ops@luminatrace.com' },
-  { event_id: 'ev_3', metric_name: 'DB Connections', condition: '>', threshold: 500, triggered_value: 610, status: 'resolved', triggered_at: '2024-05-20T10:00:00Z', resolved_at: '2024-05-20T10:18:00Z', server_name: 'postgres-writer', notification_email: 'ops@luminatrace.com' },
-  { event_id: 'ev_4', metric_name: '5xx Error Rate', condition: '>', threshold: 5, triggered_value: 8.2, status: 'resolved', triggered_at: '2024-05-19T22:00:00Z', resolved_at: '2024-05-19T22:03:48Z', server_name: 'payment-worker', notification_email: 'billing@luminatrace.com' },
-];
-
-const mockRules = [
-  { id: 'ru_1', metric_name: 'API Latency', condition: '>', threshold: 1000, notification_email: 'ops@luminatrace.com', is_active: true },
-  { id: 'ru_2', metric_name: 'CPU Usage', condition: '>', threshold: 85, notification_email: 'ops@luminatrace.com', is_active: true },
-  { id: 'ru_3', metric_name: 'DB Connections', condition: '>', threshold: 500, notification_email: 'ops@luminatrace.com', is_active: false },
-  { id: 'ru_4', metric_name: '5xx Error Rate', condition: '>', threshold: 5, notification_email: 'billing@luminatrace.com', is_active: true },
-];
+import { alertsApi } from '../../api/alerts';
 
 const AVAILABLE_METRICS = [
   { id: 'cpu_usage', label: 'CPU Usage', unit: '%', placeholder: 'e.g. 85.0', defaultCondition: '>', min: 0, max: 100 },
-  { id: 'memory_usage', label: 'Memory Utilization', unit: '%', placeholder: 'e.g. 90.0', defaultCondition: '>', min: 0, max: 100 },
-  { id: 'api_latency', label: 'API Latency', unit: 'ms', placeholder: 'e.g. 1500', defaultCondition: '>', min: 0, max: 60000 },
-  { id: 'db_connections', label: 'DB Connections', unit: 'count', placeholder: 'e.g. 500', defaultCondition: '>', min: 0, max: 100000 },
-  { id: 'error_rate_5xx', label: '5xx Error Rate', unit: '%', placeholder: 'e.g. 5.0', defaultCondition: '>', min: 0, max: 100 },
-  { id: 'disk_usage', label: 'Disk Space Usage', unit: '%', placeholder: 'e.g. 95.0', defaultCondition: '>', min: 0, max: 100 },
-  { id: 'uptime', label: 'System Uptime', unit: 'sec', placeholder: 'e.g. 86400', defaultCondition: '<', min: 0, max: 315360000 },
+  { id: 'memory_used_percent', label: 'Memory Utilization', unit: '%', placeholder: 'e.g. 90.0', defaultCondition: '>', min: 0, max: 100 },
+  { id: 'response_time', label: 'API Latency', unit: 'ms', placeholder: 'e.g. 1500', defaultCondition: '>', min: 0, max: 60000 },
+  { id: 'active_connections', label: 'DB/Active Connections', unit: 'count', placeholder: 'e.g. 500', defaultCondition: '>', min: 0, max: 100000 },
+  { id: 'error_count', label: 'Error Count', unit: 'count', placeholder: 'e.g. 50', defaultCondition: '>', min: 0, max: 100000 },
+  { id: 'request_count', label: 'Request Volume', unit: 'count', placeholder: 'e.g. 10000', defaultCondition: '>', min: 0, max: 1000000 },
 ];
 
 const CONDITION_OPTIONS = [
@@ -33,6 +20,14 @@ const CONDITION_OPTIONS = [
   { value: '<', label: 'Less than (<)' },
   { value: '==', label: 'Equals (==)' },
 ];
+
+// Reusable Empty State component
+const ListEmpty = ({ label }) => (
+  <div className="w-full h-full min-h-[300px] flex flex-col items-center justify-center text-center p-8">
+    <Inbox className="w-12 h-12 text-[#2d333b] mb-4" />
+    <p className="text-sm font-mono text-[#8b949e] tracking-wide">{label}</p>
+  </div>
+);
 
 // Custom styled dark theme select
 const CustomSelect = ({ options, valueKey, labelKey, value, onChange, label, className = '' }) => {
@@ -71,7 +66,7 @@ const CustomSelect = ({ options, valueKey, labelKey, value, onChange, label, cla
   );
 };
 
-const CreateRuleModal = ({ onClose, onSave }) => {
+const CreateRuleModal = ({ projectId, onClose, onSaveComplete }) => {
   const [formData, setFormData] = useState({ 
     metric_id: AVAILABLE_METRICS[0].id, 
     condition: AVAILABLE_METRICS[0].defaultCondition, 
@@ -80,11 +75,12 @@ const CreateRuleModal = ({ onClose, onSave }) => {
   });
   
   const [errorMsg, setErrorMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dynamically resolve references
   const activeMetric = AVAILABLE_METRICS.find(m => m.id === formData.metric_id) || AVAILABLE_METRICS[0];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -108,15 +104,26 @@ const CreateRuleModal = ({ onClose, onSave }) => {
       return setErrorMsg('Please enter a strictly valid email routing address.');
     }
 
-    onSave({
-      id: `ru_${Math.random().toString(36).substr(2,9)}`,
-      metric_name: activeMetric.label,
-      condition: formData.condition,
-      threshold: numericThreshold,
-      notification_email: formData.email,
-      is_active: true
-    });
-    onClose();
+    try {
+      setIsSubmitting(true);
+      
+      const payload = {
+        metricName: activeMetric.id,
+        condition: formData.condition,
+        threshold: numericThreshold,
+        email: formData.email
+      };
+
+      await alertsApi.createRule(projectId, payload);
+      onSaveComplete();
+      onClose();
+
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.response?.data?.error || 'Failed to successfully deploy telemetry rule.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -128,7 +135,7 @@ const CreateRuleModal = ({ onClose, onSave }) => {
              <h2 className="text-white font-bold text-lg mb-0.5">Configure Telemetry Rule</h2>
              <p className="text-xs font-mono text-[#8b949e]">Define thresholds to monitor anomalies across your cosmic cluster.</p>
           </div>
-          <button onClick={onClose} className="p-2 ml-4 hover:bg-white/10 rounded-full transition-colors text-[#8b949e] hover:text-white">
+          <button onClick={onClose} disabled={isSubmitting} className="p-2 ml-4 hover:bg-white/10 rounded-full transition-colors text-[#8b949e] hover:text-white disabled:opacity-50">
              <X className="w-5 h-5"/>
           </button>
         </div>
@@ -171,11 +178,10 @@ const CreateRuleModal = ({ onClose, onSave }) => {
               </label>
               <div className="relative">
                  <input 
-                    type="text" // using text combined with custom validation to allow flexible UX before strict cast
+                    type="text"
                     placeholder={activeMetric.placeholder} 
                     value={formData.threshold} 
                     onChange={e => {
-                       // Only allow numbers and one decimal dot
                        const val = e.target.value.replace(/[^0-9.]/g, '');
                        const parts = val.split('.');
                        const formatted = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : val;
@@ -204,9 +210,9 @@ const CreateRuleModal = ({ onClose, onSave }) => {
           </div>
 
           <div className="pt-4 flex justify-end space-x-3 border-t border-[#2d333b] pt-5 mt-2">
-             <button type="button" onClick={onClose} className="px-5 py-2 text-sm text-[#8b949e] hover:text-white font-medium transition-colors">Abort</button>
-             <button type="submit" className="px-6 py-2 bg-gradient-to-r from-[#818cf8] to-[#c084fc] hover:opacity-90 text-white text-sm font-semibold rounded-lg shadow-[0_0_20px_rgba(129,140,248,0.3)] transition-all flex items-center">
-                Deploy Monitor
+             <button type="button" onClick={onClose} disabled={isSubmitting} className="px-5 py-2 text-sm text-[#8b949e] hover:text-white font-medium transition-colors disabled:opacity-50">Abort</button>
+             <button type="submit" disabled={isSubmitting} className="px-6 py-2 bg-gradient-to-r from-[#818cf8] to-[#c084fc] hover:opacity-90 disabled:opacity-50 text-white text-sm font-semibold rounded-lg shadow-[0_0_20px_rgba(129,140,248,0.3)] transition-all flex items-center">
+                {isSubmitting ? 'Deploying...' : 'Deploy Monitor'}
              </button>
           </div>
         </form>
@@ -216,13 +222,56 @@ const CreateRuleModal = ({ onClose, onSave }) => {
 };
 
 const Alerts = () => {
+  const { currentProject } = useSelector(state => state.project);
+  const projectId = currentProject?.id;
+
   const [activeTab, setActiveTab] = useState('history'); // 'history' | 'rules'
-  const [events, setEvents] = useState(mockEvents);
-  const [rules, setRules] = useState(mockRules);
+  const [events, setEvents] = useState([]);
+  const [rules, setRules] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchAlertData = useCallback(async () => {
+    if (!projectId) return;
+    setIsLoading(true);
+    try {
+      const [rulesRes, eventsRes] = await Promise.allSettled([
+        alertsApi.getRules(projectId),
+        alertsApi.getEvents(projectId)
+      ]);
+
+      if (rulesRes.status === 'fulfilled') {
+        setRules(rulesRes.value.data?.rules || []);
+      }
+      if (eventsRes.status === 'fulfilled') {
+        setEvents(eventsRes.value.data?.events || []);
+      }
+    } catch (err) {
+      console.error("Failed to load alerts module data", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    fetchAlertData();
+  }, [fetchAlertData]);
 
   const firingCount = events.filter(e => e.status === 'firing').length;
   const resolvedCount = events.filter(e => e.status === 'resolved').length;
+
+  // Derive MTTR from resolved events natively without mocks
+  const computeMeanTimeToResolve = () => {
+    const resolvedEvents = events.filter(e => e.status === 'resolved' && e.resolved_at && e.triggered_at);
+    if (resolvedEvents.length === 0) return 0;
+    
+    const totalMinutes = resolvedEvents.reduce((acc, ev) => {
+      const start = new Date(ev.triggered_at);
+      const end = new Date(ev.resolved_at);
+      return acc + ((end - start) / 60000);
+    }, 0);
+    return Math.round(totalMinutes / resolvedEvents.length);
+  };
 
   const calculateDuration = (start, end) => {
     const d1 = new Date(start);
@@ -234,12 +283,30 @@ const Alerts = () => {
     return `${hrs}h ${remaining}m`;
   };
 
-  const handleRuleToggle = (id) => {
-    setRules(prev => prev.map(r => r.id === id ? { ...r, is_active: !r.is_active } : r));
+  const getMetricLabel = (metricId) => {
+    const found = AVAILABLE_METRICS.find(m => m.id === metricId);
+    return found ? found.label : metricId;
   };
 
-  const handleDeleteRule = (id) => {
-    setRules(prev => prev.filter(r => r.id !== id));
+  const handleRuleToggle = async (id, currentStatus) => {
+    try {
+      // Optimistic update
+      setRules(prev => prev.map(r => r.id === id ? { ...r, is_active: !currentStatus } : r));
+      await alertsApi.toggleRule(projectId, id, !currentStatus);
+    } catch (err) {
+      // Revert if error
+      setRules(prev => prev.map(r => r.id === id ? { ...r, is_active: currentStatus } : r));
+      console.error(err);
+    }
+  };
+
+  const handleDeleteRule = async (id) => {
+    try {
+      await alertsApi.deleteRule(projectId, id);
+      setRules(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -249,9 +316,9 @@ const Alerts = () => {
       <div className="flex justify-between items-start shrink-0">
          <div>
            <h1 className="text-3xl font-bold text-white tracking-tight mb-1">Active Alerts</h1>
-           <p className="text-sm font-mono text-[#8b949e]">Real-time monitoring of cosmic telemetry anomalies.</p>
+           <p className="text-sm font-mono text-[#8b949e]">Real-time alerting for anomaly remediation.</p>
          </div>
-         <button onClick={() => setIsModalOpen(true)} className="px-5 py-2.5 bg-gradient-to-r from-[#818cf8] to-[#c084fc] hover:opacity-90 text-white rounded-lg shadow-[0_0_20px_rgba(129,140,248,0.3)] font-semibold text-sm transition-all flex items-center">
+         <button onClick={() => setIsModalOpen(true)} className="px-5 py-2.5 bg-gradient-to-r from-[#818cf8] to-[#c084fc] hover:opacity-90 text-white rounded-lg shadow-[0_0_20px_rgba(129,140,248,0.3)] font-semibold text-sm transition-all flex items-center active:scale-95">
             <Bell className="w-4 h-4 mr-2" />
             New Monitor
          </button>
@@ -260,26 +327,25 @@ const Alerts = () => {
       {/* KPI Ribbon */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 shrink-0">
          <div className="bg-[#11151c] border border-white/5 rounded-xl p-5 flex flex-col justify-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#ef4444]/5 blur-[50px] rounded-full point-events-none"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#ef4444]/5 blur-[50px] rounded-full pointer-events-none"></div>
             <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase mb-2">Total Firing Alerts</span>
             <div className="flex items-baseline space-x-3">
               <span className="text-4xl font-bold font-mono text-white tracking-tighter">{firingCount}</span>
-              <span className="text-xs font-mono text-[#fca5a5] flex items-center bg-[#450a0a] px-1.5 py-0.5 rounded border border-[#7f1d1d]"><AlertTriangle className="w-3 h-3 mr-1"/> Action Req</span>
+              {firingCount > 0 && <span className="text-xs font-mono text-[#fca5a5] flex items-center bg-[#450a0a] px-1.5 py-0.5 rounded border border-[#7f1d1d]"><AlertTriangle className="w-3 h-3 mr-1"/> Action Req</span>}
             </div>
          </div>
          
          <div className="bg-[#11151c] border border-white/5 rounded-xl p-5 flex flex-col justify-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#a5b4fc]/5 blur-[50px] rounded-full point-events-none"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#a5b4fc]/5 blur-[50px] rounded-full pointer-events-none"></div>
             <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase mb-2">Mean Time to Resolve</span>
             <div className="flex items-baseline space-x-1">
-              <span className="text-4xl font-bold font-mono text-white tracking-tighter">18</span>
+              <span className="text-4xl font-bold font-mono text-white tracking-tighter">{computeMeanTimeToResolve()}</span>
               <span className="text-xl font-mono text-[#8b949e]">m</span>
-              <span className="text-xs font-mono text-[#06b6d4] ml-3">~ -2m</span>
             </div>
          </div>
 
          <div className="bg-[#11151c] border border-white/5 rounded-xl p-5 flex flex-col justify-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#10b981]/5 blur-[50px] rounded-full point-events-none"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#10b981]/5 blur-[50px] rounded-full pointer-events-none"></div>
             <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase mb-2">Total Resolved</span>
             <div className="flex items-baseline space-x-3">
               <span className="text-4xl font-bold font-mono text-white tracking-tighter">{resolvedCount}</span>
@@ -310,8 +376,10 @@ const Alerts = () => {
          {/* Content Area Rendering */}
          <div className="flex-1 overflow-y-auto w-full no-scrollbar relative">
            
-           {activeTab === 'history' && (
-             <div className="w-full">
+           {isLoading ? (
+             <div className="w-full h-full flex flex-col items-center justify-center pt-24 text-[#8b949e] font-mono text-sm">Loading telemetry configurations...</div>
+           ) : activeTab === 'history' ? (
+             <div className="w-full h-full flex flex-col">
                 <div className="w-full border-b border-[#2d333b] px-6 py-3 flex text-[10px] font-mono tracking-widest text-[#8b949e] uppercase sticky top-0 bg-[#11151c]/95 backdrop-blur z-10">
                   <div className="w-[30%]">Alert Description Context</div>
                   <div className="w-[15%]">Violated Value</div>
@@ -320,33 +388,35 @@ const Alerts = () => {
                   <div className="w-[20%] text-right pr-4">Status</div>
                 </div>
 
-                {events.map((ev) => (
-                  <div key={ev.event_id} className="w-full px-6 py-4 flex items-center border-b border-white/5 hover:bg-[#161b22] transition-colors">
-                     <div className="w-[30%]">
-                        <h4 className="text-white text-sm font-semibold truncate">{ev.metric_name} Anomaly</h4>
-                        <p className="text-xs font-mono text-[#8b949e] mt-1 truncate">Condition: {ev.metric_name} {ev.condition} {ev.threshold}</p>
-                     </div>
-                     <div className="w-[15%]">
-                        <span className="font-mono text-sm text-[#fca5a5]">{ev.triggered_value}</span>
-                     </div>
-                     <div className="w-[20%] flex items-center text-[#c9d1d9] text-xs font-mono">
-                        <Server className="w-3.5 h-3.5 mr-2 text-[#8b949e]"/> {ev.server_name}
-                     </div>
-                     <div className="w-[15%] font-mono text-xs text-[#8b949e]">
-                        {calculateDuration(ev.triggered_at, ev.resolved_at)}
-                     </div>
-                     <div className="w-[20%] flex justify-end">
-                        <span className={`px-3 py-1 text-[10px] font-bold tracking-wider rounded-full border ${ev.status === 'firing' ? 'bg-[#450a0a]/50 text-[#ef4444] border-[#7f1d1d]' : 'bg-[#064e3b]/50 text-[#10b981] border-[#065f46]'}`}>
-                          {ev.status.toUpperCase()}
-                        </span>
-                     </div>
-                  </div>
-                ))}
+                {events.length === 0 ? (
+                   <ListEmpty label="No anomaly events have triggered yet. Your system is perfectly stable." />
+                ) : (
+                  events.map((ev) => (
+                    <div key={ev.event_id} className="w-full px-6 py-4 flex items-center border-b border-white/5 hover:bg-[#161b22] transition-colors">
+                       <div className="w-[30%]">
+                          <h4 className="text-white text-sm font-semibold truncate">{getMetricLabel(ev.metric_name)} Anomaly</h4>
+                          <p className="text-xs font-mono text-[#8b949e] mt-1 truncate">Condition: {getMetricLabel(ev.metric_name)} {ev.condition} {ev.threshold}</p>
+                       </div>
+                       <div className="w-[15%]">
+                          <span className="font-mono text-sm text-[#fca5a5]">{ev.triggered_value}</span>
+                       </div>
+                       <div className="w-[20%] flex items-center text-[#c9d1d9] text-xs font-mono">
+                          <Server className="w-3.5 h-3.5 mr-2 text-[#8b949e]"/> {ev.server_name || ev.server_hostname || 'Cluster Node'}
+                       </div>
+                       <div className="w-[15%] font-mono text-xs text-[#8b949e]">
+                          {calculateDuration(ev.triggered_at, ev.resolved_at)}
+                       </div>
+                       <div className="w-[20%] flex justify-end">
+                          <span className={`px-3 py-1 text-[10px] font-bold tracking-wider rounded-full border ${ev.status === 'firing' ? 'bg-[#450a0a]/50 text-[#ef4444] border-[#7f1d1d]' : 'bg-[#064e3b]/50 text-[#10b981] border-[#065f46]'}`}>
+                            {ev.status.toUpperCase()}
+                          </span>
+                       </div>
+                    </div>
+                  ))
+                )}
              </div>
-           )}
-
-           {activeTab === 'rules' && (
-             <div className="w-full">
+           ) : (
+             <div className="w-full h-full flex flex-col">
                 <div className="w-full border-b border-[#2d333b] px-6 py-3 flex text-[10px] font-mono tracking-widest text-[#8b949e] uppercase sticky top-0 bg-[#11151c]/95 backdrop-blur z-10">
                   <div className="w-[30%]">Monitored Metric</div>
                   <div className="w-[15%]">Condition Evaluated</div>
@@ -355,41 +425,54 @@ const Alerts = () => {
                   <div className="w-[15%] text-right pr-4">Actions</div>
                 </div>
 
-                {rules.map((rule) => (
-                  <div key={rule.id} className={`w-full px-6 py-4 flex items-center border-b border-white/5 transition-colors ${rule.is_active ? 'hover:bg-[#161b22]' : 'opacity-60 bg-black/20'}`}>
-                     <div className="w-[30%] font-semibold text-white text-sm">
-                        {rule.metric_name}
-                     </div>
-                     <div className="w-[15%]">
-                        <span className="px-2 py-1 bg-white/5 border border-white/10 rounded font-mono text-xs text-[#c9d1d9] tracking-wider">
-                           METRIC {rule.condition} {rule.threshold}
-                        </span>
-                     </div>
-                     <div className="w-[25%] text-[#8b949e] text-xs font-mono truncate pr-4">
-                        {rule.notification_email}
-                     </div>
-                     <div className="w-[15%] flex justify-center">
-                        <button 
-                           onClick={() => handleRuleToggle(rule.id)}
-                           className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${rule.is_active ? 'bg-[#818cf8]' : 'bg-[#4b5563]'}`}
-                        >
-                           <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${rule.is_active ? 'translate-x-4' : 'translate-x-1'}`} />
-                        </button>
-                     </div>
-                     <div className="w-[15%] flex justify-end">
-                        <button onClick={() => handleDeleteRule(rule.id)} className="p-1.5 text-[#8b949e] hover:text-[#ef4444] hover:bg-[#ef4444]/10 rounded bg-transparent transition-colors">
-                           <Trash2 className="w-4 h-4"/>
-                        </button>
-                     </div>
-                  </div>
-                ))}
+                {rules.length === 0 ? (
+                  <ListEmpty label="Configure a telemetry rule monitor to get notified on system anomalies." />
+                ) : (
+                  rules.map((rule) => (
+                    <div key={rule.id} className={`w-full px-6 py-4 flex items-center border-b border-white/5 transition-colors ${rule.is_active ? 'hover:bg-[#161b22]' : 'opacity-60 bg-black/20'}`}>
+                       <div className="w-[30%] font-semibold text-white text-sm">
+                          {getMetricLabel(rule.metric_name)}
+                       </div>
+                       <div className="w-[15%]">
+                          <span className="px-2 py-1 bg-white/5 border border-white/10 rounded font-mono text-xs text-[#c9d1d9] tracking-wider">
+                             METRIC {rule.condition} {rule.threshold}
+                          </span>
+                       </div>
+                       <div className="w-[25%] text-[#8b949e] text-xs font-mono truncate pr-4">
+                          {rule.notification_email}
+                       </div>
+                       <div className="w-[15%] flex justify-center">
+                          <button 
+                             onClick={() => handleRuleToggle(rule.id, rule.is_active)}
+                             className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${rule.is_active ? 'bg-[#818cf8]' : 'bg-[#4b5563]'}`}
+                          >
+                             <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${rule.is_active ? 'translate-x-4' : 'translate-x-1'}`} />
+                          </button>
+                       </div>
+                       <div className="w-[15%] flex justify-end">
+                          <button onClick={() => handleDeleteRule(rule.id)} className="p-1.5 text-[#8b949e] hover:text-[#ef4444] hover:bg-[#ef4444]/10 rounded bg-transparent transition-colors">
+                             <Trash2 className="w-4 h-4"/>
+                          </button>
+                       </div>
+                    </div>
+                  ))
+                )}
              </div>
            )}
 
          </div>
       </div>
       
-      {isModalOpen && <CreateRuleModal onClose={() => setIsModalOpen(false)} onSave={(newRule) => { setRules([newRule, ...rules]); setActiveTab('rules'); }} />}
+      {isModalOpen && (
+        <CreateRuleModal 
+          projectId={projectId} 
+          onClose={() => setIsModalOpen(false)} 
+          onSaveComplete={() => {
+             setActiveTab('rules');
+             fetchAlertData(); // Reload perfectly parsed schema format explicitly from postres query to avoid optimistic object mismatch
+          }} 
+        />
+      )}
       
     </div>
   );
