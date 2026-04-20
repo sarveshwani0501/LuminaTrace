@@ -1,85 +1,115 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { 
   BarChart, Bar, ResponsiveContainer, Cell, Tooltip as RechartsTooltip, XAxis
 } from 'recharts';
 import { 
   AlertCircle, Info, AlertTriangle, ExternalLink, Copy, 
-  TerminalSquare, Cpu, HardDrive, Search, Filter, Server, Clock, ChevronDown, Check
+  TerminalSquare, Cpu, HardDrive, Search, Filter, Server, Clock, ChevronDown, Check, ChevronRight, Inbox
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import TraceWaterfallModal from '../../components/traces/TraceWaterfallModal';
+import { logsApi } from '../../api/logs';
+
+const ChartEmpty = ({ label }) => (
+  <div className="w-full h-full flex flex-col items-center justify-center text-center px-4">
+    <Inbox className="w-8 h-8 text-[#2d333b] mb-3" />
+    <p className="text-[11px] text-[#8b949e] font-mono leading-tight bg-[#161b22] px-4 py-2 border border-[#2d333b] rounded-lg border-dashed">
+      {label}
+    </p>
+  </div>
+);
 
 const Logs = () => {
-  const { currentProject } = useSelector(state => state.project) || { currentProject: { id: 'mock-alpha' } };
-  const projectId = currentProject?.id || 'mock-alpha';
+  const { currentProject } = useSelector(state => state.project);
+  const projectId = currentProject?.id;
 
   const [isLiveStream, setIsLiveStream] = useState(true);
-  const [selectedLog, setSelectedLog] = useState(null);
+  const [expandedLogId, setExpandedLogId] = useState(null);
   
-  // Custom Filters mapping directly to `getLogs` backend API
+  // Custom Filters mapping directly to backend API
   const [timeRange, setTimeRange] = useState('1h');
   const [isTimeDropdownOpen, setIsTimeDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLevels, setSelectedLevels] = useState([]); // Array supporting multi-select e.g. ['ERROR', 'WARN']
+  const [selectedLevels, setSelectedLevels] = useState([]);
   const [activeTraceId, setActiveTraceId] = useState(null);
   
-  // Strict Mock State mapping exactly to DB schema fields
+  // Backend State
   const [logs, setLogs] = useState([]);
   const [volumeData, setVolumeData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Helper: map volume intervals safely
+  const parseVolumeData = (data = []) =>
+    data.map(d => ({
+      time: new Date(d.time_bucket || d.time || d.bucket).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      count: parseInt(d.log_count || d.value || 0, 10),
+      isPeak: false // We can dynamically calculate peak if needed
+    })).reverse(); // Usually comes DESC from DB, chart needs ASC
+
+  const fetchLogsData = useCallback(async () => {
+    if (!projectId) return;
+    setIsLoading(true);
+    
+    try {
+      // Pass the selected specific level if only one is chosen (backend strictly supports one string filter natively right now, we handle multi-select via client slice mostly unless extended)
+      const primaryLevel = selectedLevels.length === 1 ? selectedLevels[0] : undefined;
+
+      const [logsRes, volumeRes] = await Promise.allSettled([
+         logsApi.getLogs(projectId, { timerange: timeRange, level: primaryLevel, limit: 150 }),
+         logsApi.getVolume(projectId, timeRange)
+      ]);
+
+      if (logsRes.status === 'fulfilled') {
+        const d = logsRes.value.data?.data || logsRes.value.data || [];
+        setLogs(Array.isArray(d) ? d : []);
+      }
+      
+      if (volumeRes.status === 'fulfilled') {
+        const v = volumeRes.value.data?.data || volumeRes.value.data || [];
+        const parsed = parseVolumeData(Array.isArray(v) ? v : []);
+        
+        // Mark highest volume count as Peak to highlight column
+        const maxCount = Math.max(...parsed.map(p => p.count), 0);
+        parsed.forEach(p => { p.isPeak = (p.count === maxCount && maxCount > 0); });
+        
+        setVolumeData(parsed);
+      }
+    } catch (err) {
+      console.error('Logs fetch failed', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [projectId, timeRange, selectedLevels]);
 
   useEffect(() => {
-    // Generate Volume Data
-    const vol = Array.from({length: 30}).map((_, i) => ({
-      time: `14:${20 + i}`, 
-      count: Math.floor(Math.random() * 80) + 10,
-      isPeak: i === 18 
-    }));
-    setVolumeData(vol);
-
-    // High-fidelity backend payload simulation mapping STRICTLY to your SDK / DB schema
-    // Fields: time, server_name (from join), level, message, trace_id, span_id, metadata
-    const rawLogs = [
-      { id: '1', time: '2024-05-20T14:22:01.004Z', server_name: 'auth-master-01', level: 'ERROR', message: 'Connection timed out while verifying JWT', trace_id: 'tr_9x2b_k8L1', span_id: 'sp_4n0w_e1V0', metadata: { error_type: 'Timeout' } },
-      { id: '2', time: '2024-05-20T14:21:58.892', server_name: 'gateway-node-A', level: 'ERROR', message: 'Upstream 502 Bad Gateway', trace_id: 'tr_4a9z_r3N4', span_id: 'sp_8fP2_k9X1', metadata: { route: '/api/v1/auth' } },
-      { id: '3', time: '2024-05-20T14:21:55.210', server_name: 'redis-cache-03', level: 'WARN', message: 'High memory pressure: cache eviction policy triggered', trace_id: 'tr_0p7v_x5R2', span_id: 'sp_9xK1_l0M4', metadata: { keys_evicted: 124 } },
-      { id: '4', time: '2024-05-20T14:21:52.441', server_name: 'billing-worker-01', level: 'INFO', message: 'Successfully processed recurring invoice payment', trace_id: 'tr_1q8d_y9T0', span_id: 'sp_3mN9_j8B5', metadata: { invoice_id: 'INV-2024-81' } },
-      { id: '5', time: '2024-05-20T14:21:50.002', server_name: 'api-core-02', level: 'DEBUG', message: 'HTTP GET /health check passed', trace_id: null, span_id: null, metadata: { response_time_ms: 12 } },
-    ];
-    setLogs(rawLogs);
-    setSelectedLog(rawLogs[0]);
-  }, [timeRange]);
+    fetchLogsData();
+  }, [fetchLogsData]);
 
   // WebSockets setup
   useEffect(() => {
-    if (!isLiveStream) return;
+    if (!isLiveStream || !projectId) return;
     const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', { withCredentials: true });
     socket.on('connect', () => socket.emit('join_project', projectId));
     
-    const interval = setInterval(() => {
-       const newLog = { 
-         id: Math.random().toString(), 
-         time: new Date().toISOString(), 
-         server_name: 'auth-master-01', 
-         level: 'INFO', 
-         message: 'Validating generic JWT context payload...', 
-         trace_id: `tr_${Math.random().toString(36).substr(2, 9)}`,
-         span_id: `sp_${Math.random().toString(36).substr(2, 9)}`,
-         metadata: { auto_injected: true }
-       };
-       setLogs(prev => [newLog, ...prev].slice(0, 100)); 
-    }, 4500);
+    socket.on('new_log', (log) => {
+       // Only append if it passes the active level filter locally so UI doesn't bounce around
+       if (selectedLevels.length > 0 && !selectedLevels.includes(log.level)) return;
+       
+       setLogs(prev => {
+          // Prevent duplicates
+          if (prev.find(p => p.id === log.id)) return prev;
+          return [log, ...prev].slice(0, 150); 
+       });
+    });
 
-    return () => {
-      clearInterval(interval);
-      socket.disconnect();
-    };
-  }, [projectId, isLiveStream]);
+    return () => socket.disconnect();
+  }, [projectId, isLiveStream, selectedLevels]);
 
 
-  // Clean formatting matching proper Log Levels (ERROR, WARN, INFO, DEBUG)
+  // Formatting Helpers
   const getLevelBadge = (level) => {
-    switch(level) {
+    switch(level?.toUpperCase()) {
       case 'ERROR': return "text-[#fca5a5] bg-[#450a0a] border-[#7f1d1d]";
       case 'WARN': return "text-[#fdba74] bg-[#451a03] border-[#78350f]";
       case 'DEBUG': return "text-[#67e8f9] bg-[#083344] border-[#164e63]";
@@ -89,7 +119,7 @@ const Logs = () => {
   };
 
   const getLevelColor = (level) => {
-    switch(level) {
+    switch(level?.toUpperCase()) {
       case 'ERROR': return "#ef4444";
       case 'WARN': return "#f59e0b";
       case 'DEBUG': return "#06b6d4";
@@ -106,6 +136,23 @@ const Logs = () => {
     } catch(e) { return isoString; }
   };
 
+  const toggleAccordion = (logId) => {
+    setExpandedLogId(prev => prev === logId ? null : logId);
+  };
+
+  // Perform client-side filter
+  const filteredLogs = logs.filter(l => {
+    if (selectedLevels.length > 0 && !selectedLevels.includes(l.level)) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!l.message?.toLowerCase().includes(q) && 
+          !(l.trace_id && l.trace_id.toLowerCase().includes(q)) &&
+          !(l.metadata && JSON.stringify(l.metadata).toLowerCase().includes(q))) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   return (
     <div className="w-full flex flex-col h-[calc(100vh-80px)] overflow-hidden space-y-4 px-2 pb-4">
@@ -117,10 +164,20 @@ const Logs = () => {
         <div className="flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-bold text-white tracking-tight mb-1">System Logs</h1>
-            <p className="text-xs font-mono text-[#8b949e]">Streaming live events from cluster</p>
+            <p className="text-xs font-mono text-[#8b949e]">Streaming event history & telemetry</p>
           </div>
           
-          <div className="flex space-x-2 justify-end">
+          <div className="flex items-center space-x-3 justify-end">
+            <div className="flex items-center mr-2 border-r border-[#2d333b] pr-4">
+               <span className="text-xs font-mono text-[#8b949e] mr-2 tracking-widest uppercase">Live Tail</span>
+               <div 
+                 onClick={() => setIsLiveStream(!isLiveStream)}
+                 className={`w-8 h-4 rounded-full cursor-pointer relative transition-colors duration-300 ${isLiveStream ? 'bg-[#c084fc]' : 'bg-[#2d333b]'}`}
+               >
+                 <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[1px] transition-transform duration-300 ${isLiveStream ? 'left-[17px]' : 'left-[1px]'}`}></div>
+               </div>
+            </div>
+
             <div 
               onClick={() => setSelectedLevels(prev => prev.includes('ERROR') ? prev.filter(l => l !== 'ERROR') : [...prev, 'ERROR'])}
               className={`px-3 py-1.5 border rounded text-xs font-mono flex items-center cursor-pointer transition-colors ${selectedLevels.includes('ERROR') || selectedLevels.length === 0 ? 'bg-[#450a0a]/80 text-[#fca5a5] border-[#7f1d1d] shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'bg-[#11151c] text-[#8b949e] border-[#2d333b] hover:border-white/30'}`}>
@@ -152,7 +209,7 @@ const Logs = () => {
             <Search className="w-4 h-4 text-[#8b949e] absolute left-3 top-1/2 -translate-y-1/2" />
             <input 
               type="text" 
-              placeholder="Search logs via metadata or trace id..." 
+              placeholder="Search logs via message, metadata, or trace id..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-[#11151c] border border-white/10 text-white text-sm rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:border-[#a5b4fc] transition-colors"
@@ -196,113 +253,154 @@ const Logs = () => {
         </div>
 
         {/* LOG VOLUME BAR CHART (100px strict height) */}
-        <div className="bg-[#11151c] border border-white/5 rounded-xl p-3 h-[110px] flex flex-col relative w-full">
+        <div className="bg-[#11151c] border border-white/5 rounded-xl p-3 h-[110px] flex flex-col relative w-full overflow-hidden">
            <div className="flex justify-between items-center mb-1 z-10 w-full shrink-0">
-             <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase">Log Volume Grouping</span>
+             <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase">Event Volume Distribution</span>
            </div>
            <div className="absolute inset-x-4 bottom-2 top-8">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={volumeData}>
-                <RechartsTooltip 
-                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-[#0d1117]/95 border border-white/10 p-2 rounded-lg shadow-2xl backdrop-blur-sm z-50">
-                          <p className="text-[10px] text-[#8b949e] mb-1 font-mono uppercase tracking-wider">{label} GMT</p>
-                          <p className="text-white text-xs font-mono"><span className="text-[#a5b4fc] font-bold">{payload[0].value}</span> Logs</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="count" radius={[2,2,0,0]}>
-                  {volumeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.isPeak ? '#a5b4fc' : '#2d333b'} fillOpacity={entry.isPeak ? 1 : 0.8} />
-                  ))}
-                </Bar>
-                <XAxis dataKey="time" hide />
-              </BarChart>
-            </ResponsiveContainer>
+             {volumeData.length === 0 ? (
+                <ChartEmpty label="No volume data recorded in this time range." />
+             ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={volumeData}>
+                    <RechartsTooltip 
+                      cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-[#0d1117]/95 border border-white/10 p-2 rounded-lg shadow-2xl backdrop-blur-sm z-50">
+                              <p className="text-[10px] text-[#8b949e] mb-1 font-mono uppercase tracking-wider">{label} GMT</p>
+                              <p className="text-white text-xs font-mono"><span className="text-[#a5b4fc] font-bold">{payload[0].value}</span> Logs</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="count" radius={[2,2,0,0]}>
+                      {volumeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.isPeak ? '#a5b4fc' : '#2d333b'} fillOpacity={entry.isPeak ? 1 : 0.8} />
+                      ))}
+                    </Bar>
+                    <XAxis dataKey="time" hide />
+                  </BarChart>
+                </ResponsiveContainer>
+             )}
            </div>
         </div>
       </div>
 
 
-      {/* MIDDLE TIER: DATATABLE (Uncluttered) */}
-      <div className="flex-1 min-h-0 bg-[#11151c] border border-white/5 rounded-xl flex flex-col overflow-hidden relative">
-        {/* Table Header */}
-        <div className="w-full bg-[#161b22] border-b border-[#2d333b] px-6 py-3 flex text-[10px] font-mono tracking-widest text-[#8b949e] uppercase shrink-0 sticky top-0 z-10 text-center">
-          <div className="w-[15%]">Time</div>
-          <div className="w-[15%]">Server Node</div>
-          <div className="w-[10%]">Level</div>
-          <div className="w-[45%] text-left pl-8">Message</div>
-          <div className="w-[15%]">Trace</div>
-        </div>
-
-        {/* Table Body - Filtered by Levels and Search Query manually simulating backend payload for now */}
-        <div className="flex-1 overflow-y-auto w-full no-scrollbar pb-4">
-          {logs.filter(l => {
-             if (selectedLevels.length > 0 && !selectedLevels.includes(l.level)) return false;
-             if (searchQuery) {
-               const q = searchQuery.toLowerCase();
-               if (!l.message.toLowerCase().includes(q) && 
-                   !(l.trace_id && l.trace_id.toLowerCase().includes(q)) &&
-                   !(l.metadata && JSON.stringify(l.metadata).toLowerCase().includes(q))) {
-                 return false;
-               }
-             }
-             return true;
-          }).map((log) => (
-            <div 
-              key={log.id} 
-              onClick={() => setSelectedLog(log)} 
-              className={`w-full px-6 py-3 flex items-center border-b border-white/5 transition-colors cursor-pointer ${selectedLog?.id === log.id ? 'bg-[#1c212b] border-l-2 border-l-[#a5b4fc]' : 'border-l-2 border-l-transparent hover:bg-[#161b22]'}`}
-            >
-              <div className="w-[15%] text-[#8b949e] font-mono text-xs text-center">{formatTime(log.time)}</div>
-              <div className="w-[15%] text-[#c9d1d9] font-mono text-xs truncate px-4 text-center">{log.server_name}</div>
-              <div className="w-[10%] text-center">
-                 <span className={`px-2.5 py-0.5 border rounded text-[10px] font-bold tracking-wider ${getLevelBadge(log.level)}`}>
-                  {log.level}
-                </span>
-              </div>
-              <div className="w-[45%] text-[#e5e7eb] text-sm font-medium truncate pr-6 pl-8 hover:text-white transition-colors" style={{ color: log.level === 'ERROR' ? '#fca5a5' : '' }}>
-                 {log.message}
-              </div>
-              <div className="w-[15%] flex justify-center">
-                  {log.trace_id ? (
-                     <div className="group flex items-center bg-[#1c212b] border border-[#2d333b] hover:border-[#818cf8] rounded overflow-hidden transition-all duration-200 shadow-sm relative">
-                       <button 
-                         className="px-2 py-1 flex items-center space-x-1.5 bg-transparent group-hover:bg-[#818cf8]/10 transition-colors z-10"
-                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTraceId(log.trace_id); }}
-                       >
-                         <span className="w-2 h-2 rounded-full bg-[#818cf8] shadow-[0_0_5px_#818cf8]"></span>
-                         <span className="font-mono text-[#a5b4fc] text-[10px] tracking-widest">{log.trace_id.substring(0, 8)}...</span>
-                         <ExternalLink className="w-3 h-3 text-[#c084fc] ml-1 opacity-100 group-hover:scale-110 transition-transform" />
-                       </button>
-                       <button 
-                         className="absolute right-0 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 translate-x-full h-full bg-[#818cf8] px-2 text-white transition-all z-20 flex items-center justify-center cursor-pointer border-l border-[#4f46e5]"
-                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(log.trace_id); }}
-                         title="Copy full trace id"
-                       >
-                         <Copy className="w-3 h-3" />
-                       </button>
+      {/* MIDDLE TIER: ACCORDION LOG LIST */}
+      <div className="flex-1 min-h-0 bg-[#0d1117] border border-white/5 rounded-xl flex flex-col overflow-hidden relative shadow-inner">
+        {filteredLogs.length === 0 ? (
+           <ChartEmpty label={isLoading ? "Loading logs..." : "No logs available. They will appear here when an agent transmits them."} />
+        ) : (
+           <div className="flex-1 overflow-y-auto w-full p-2 space-y-1">
+             {filteredLogs.map((log) => {
+               const isExpanded = expandedLogId === log.id;
+               
+               return (
+                 <div 
+                   key={log.id}
+                   className={`w-full rounded-lg transition-all duration-200 border ${
+                     isExpanded 
+                     ? 'bg-[#161b22] border-[#2d333b] shadow-md mb-2 pb-2' 
+                     : 'bg-[#11151c] border-transparent hover:border-[#2d333b] hover:bg-[#161b22] cursor-pointer'
+                   }`}
+                 >
+                   {/* ROW HEADER (Always Visible) */}
+                   <div 
+                     className="px-4 py-2.5 flex items-center justify-between group cursor-pointer select-none"
+                     onClick={() => toggleAccordion(log.id)}
+                   >
+                     {/* Left: Indicator, Time, Level, Server */}
+                     <div className="flex items-center w-[40%] space-x-4 shrink-0">
+                        <ChevronRight className={`w-4 h-4 text-[#8b949e] transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                        <span className="text-[#8b949e] font-mono text-[11px] w-24 shrink-0">{formatTime(log.time)}</span>
+                        <div className="w-16 shrink-0 flex justify-center">
+                          <span className={`px-2 py-0.5 border rounded text-[9px] font-bold tracking-wider w-full text-center ${getLevelBadge(log.level)}`}>
+                            {log.level || 'INFO'}
+                          </span>
+                        </div>
+                        <span className="text-[#c9d1d9] font-mono text-[11px] truncate">{log.server_name || log.server_hostname || 'Local-Node'}</span>
                      </div>
-                  ) : (
-                     <span className="text-[#4b5563] font-mono text-xs">--</span>
-                  )}
-              </div>
-            </div>
-          ))}
-        </div>
+                     
+                     {/* Right: Message Preview */}
+                     <div 
+                       className={`flex-1 pl-4 text-xs font-semibold pr-2 transition-colors ${isExpanded ? 'text-white line-clamp-1' : 'text-[#8b949e] truncate group-hover:text-[#c9d1d9]'}`}
+                       style={{ color: !isExpanded && log.level?.toUpperCase() === 'ERROR' ? '#fca5a5' : undefined }}
+                     >
+                        {log.message}
+                     </div>
+                   </div>
+
+                   {/* EXPANDED CONTENT AREA */}
+                   {isExpanded && (
+                     <div className="px-14 pt-2 pb-4 flex flex-col space-y-4 cursor-default">
+                        
+                        {/* Full Multi-line Message Block */}
+                        <div className="bg-[#0a0c10] border border-[#2d333b] rounded-md p-3 whitespace-pre-wrap text-sm font-mono text-[#e5e7eb] leading-relaxed select-text" style={{ borderColor: log.level?.toUpperCase() === 'ERROR' ? '#7f1d1d' : '#2d333b' }}>
+                           {log.message}
+                        </div>
+                        
+                        <div className="flex flex-row space-x-4 w-full">
+                           {/* Metadata JSON Block */}
+                           <div className="flex-1 bg-[#0a0c10] border border-[#2d333b] rounded-md p-3 overflow-hidden flex flex-col">
+                              <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase mb-2 border-b border-[#2d333b] pb-2 inline-block">Context Metadata</span>
+                              <pre className="text-[11px] font-mono text-[#818cf8] overflow-x-auto whitespace-pre-wrap flex-1 select-text">
+                                {log.metadata ? JSON.stringify(log.metadata, null, 2) : '{}'}
+                              </pre>
+                           </div>
+
+                           {/* Trace Panel */}
+                           <div className="w-64 bg-[#0a0c10] border border-[#2d333b] rounded-md p-4 flex flex-col items-center justify-center shrink-0">
+                              <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase mb-4 w-full text-center">Distributed Trace</span>
+                              {log.trace_id ? (
+                                <div className="flex flex-col items-center space-y-3 w-full">
+                                    <div className="group flex items-center bg-[#161b22] border border-[#2d333b] rounded w-full overflow-hidden shadow-inner">
+                                       <div className="flex-1 px-3 py-2 font-mono text-[#a5b4fc] text-[11px] text-center select-text">
+                                          {log.trace_id}
+                                       </div>
+                                       <button 
+                                         className="px-3 h-full border-l border-[#2d333b] hover:bg-[#818cf8] hover:text-white text-[#8b949e] transition-colors"
+                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(log.trace_id); }}
+                                         title="Copy exact trace id"
+                                       >
+                                         <Copy className="w-3.5 h-3.5" />
+                                       </button>
+                                    </div>
+                                    <button 
+                                        onClick={() => setActiveTraceId(log.trace_id)}
+                                        className="w-full flex items-center justify-center bg-gradient-to-r from-[#818cf8]/10 to-[#c084fc]/10 hover:from-[#818cf8]/20 hover:to-[#c084fc]/20 border border-[#818cf8]/30 px-4 py-2 rounded text-xs font-bold text-white transition-all active:scale-95"
+                                    >
+                                        <ExternalLink className="w-3.5 h-3.5 mr-2 text-[#c084fc]" />
+                                        View Trace Waterfall
+                                    </button>
+                                </div>
+                              ) : (
+                                <p className="text-[11px] font-mono text-[#4b5563] text-center py-4">No trace isolated for this span context.</p>
+                              )}
+                           </div>
+                        </div>
+
+                     </div>
+                   )}
+
+                 </div>
+               );
+             })}
+           </div>
+        )}
       </div>
 
-      {/* RENDER WATERFALL MODAL ODDLY IF OPEN */}
-      <TraceWaterfallModal 
-         traceId={activeTraceId} 
-         onClose={() => setActiveTraceId(null)} 
-      />
+      {/* RENDER WATERFALL MODAL */}
+      {activeTraceId && (
+        <TraceWaterfallModal 
+           traceId={activeTraceId} 
+           onClose={() => setActiveTraceId(null)} 
+        />
+      )}
 
     </div>
   );
