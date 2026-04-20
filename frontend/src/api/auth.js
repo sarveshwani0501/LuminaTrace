@@ -10,4 +10,6 @@ export const authApi = {
   
   requestPasswordReset: (data) => api.post('/auth/password-reset/request', data),
   resetPassword: (data) => api.post('/auth/password-reset/reset', data),
+
+  changePassword: (data) => api.post('/auth/password/change', data),
 };

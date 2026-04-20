@@ -12,6 +12,7 @@ export const orgApi = {
   removeMember: (orgId, memberId) => api.delete(`/organizations/${orgId}/members/${memberId}`),
   
   // Invites
-  createInvite: (orgId, data) => api.post(`/organizations/${orgId}/invites`, data),
-  // (Note: Accepting an invite lives under the isolated /invites path in the backend)
+  createInvite: (orgId, data) => api.post(`/organizations/${orgId}/members`, data),
+  getInvites: (orgId) => api.get(`/organizations/${orgId}/invites`),
+  deleteInvite: (orgId, inviteId) => api.delete(`/organizations/${orgId}/invites/${inviteId}`)
 };
