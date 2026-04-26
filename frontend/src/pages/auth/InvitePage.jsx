@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { UserPlus, Building2, CheckCircle2 } from 'lucide-react';
+import { useDispatch } from 'react-redux';
+import { setUser } from '../../store/slices/authSlice';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { Card, CardContent } from '../../components/ui/Card';
+import { invitesApi } from '../../api/invites';
 
 const InvitePage = () => {
   const { token } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   // Initialization states
   const [isLoading, setIsLoading] = useState(true);
@@ -23,20 +27,8 @@ const InvitePage = () => {
   useEffect(() => {
     const fetchInviteData = async () => {
       try {
-        // TODO: Replace with Axios GET to `/invites/${token}`
-        console.log('Fetching invite for token:', token);
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        // Mock response matching `getInviteInfo` from inviteService.js
-        const mockResponse = {
-          organization_name: "Acme Corp",
-          organizationSlug: "acme-corp",
-          email: "test@luminatrace.com",
-          role: "admin",
-          existingUser: false, // Set to true to test the Existing User flow!
-        };
-        
-        setInviteData(mockResponse);
+        const response = await invitesApi.getInviteInfo(token);
+        setInviteData(response.data);
       } catch (err) {
         setPageError('This invite link is invalid, expired, or has already been used.');
       } finally {
@@ -63,7 +55,6 @@ const InvitePage = () => {
     if (!formData.password) {
       errors.password = "Password is required";
     } else if (!inviteData.existingUser && formData.password.length < 8) {
-      // Only enforce length strictly on new signup, though good practice to check always
       errors.password = "Must be at least 8 characters";
     }
     
@@ -79,23 +70,34 @@ const InvitePage = () => {
     setFormErrors({});
 
     try {
+      let authResponse;
+      
       if (inviteData.existingUser) {
-        // TODO: Axios POST to `/invites/${token}/existing` with { email: inviteData.email, password }
-        console.log('Accepting as existing user:', { email: inviteData.email, password: formData.password });
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        authResponse = await invitesApi.acceptAsExistingUser(token, { 
+           email: inviteData.email, 
+           password: formData.password 
+        });
       } else {
-        // TODO: Axios POST to `/invites/${token}/new` with { full_name, password }
-        console.log('Accepting as new user:', { full_name: formData.full_name, password: formData.password });
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        authResponse = await invitesApi.acceptAsNewUser(token, { 
+           full_name: formData.full_name, 
+           password: formData.password 
+        });
+      }
+
+      // Automatically authenticate the user natively using the fastify cookie injection payload
+      if (authResponse.data && authResponse.data.user) {
+         dispatch(setUser(authResponse.data.user));
+         // By triggering a hard reload locally, Redux bootstrapper will execute `/auth/verify` natively grabbing the new org list!
       }
 
       setIsSuccess(true);
-      // Wait a moment so they see success, then route them inside the app
-      setTimeout(() => navigate('/app/dashboard'), 1500);
+      
+      setTimeout(() => {
+         window.location.href = '/app/dashboard'; 
+      }, 1500);
 
     } catch (err) {
-      // Matching standard Lumina trace HTTP errors
-      setFormErrors({ global: 'Invalid credentials or failed to accept invite.' });
+      setFormErrors({ global: err.response?.data?.message || err.response?.data?.error || 'Invalid credentials or failed to accept invite.' });
     } finally {
       setIsSubmitting(false);
     }
