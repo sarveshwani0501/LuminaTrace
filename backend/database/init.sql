@@ -201,3 +201,34 @@ CREATE INDEX idx_alert_events_rule_server_status
 ON alert_events (alert_rule_id, server_id, status)
 WHERE resolved_at IS NULL;
 
+-- SPANS TABLE for Distributed Tracing
+CREATE TABLE spans (
+    id UUID DEFAULT gen_random_uuid(),
+    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    server_id UUID REFERENCES servers(id) ON DELETE SET NULL,
+    
+    trace_id UUID NOT NULL,
+    span_id UUID NOT NULL,
+    parent_span_id UUID,
+    
+    name TEXT NOT NULL,
+    
+    start_time TIMESTAMPTZ NOT NULL,
+    end_time TIMESTAMPTZ NOT NULL,
+    duration_ms INTEGER NOT NULL,
+    
+    metadata JSONB DEFAULT '{}',
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (id, start_time)
+);
+
+
+SELECT create_hypertable('spans', 'start_time');
+
+
+CREATE INDEX idx_spans_project ON spans(project_id);
+CREATE INDEX idx_spans_trace ON spans(project_id, trace_id);
+CREATE INDEX idx_spans_trace_parent ON spans(trace_id, parent_span_id);
+CREATE INDEX idx_spans_server ON spans(server_id) WHERE server_id IS NOT NULL;
+
