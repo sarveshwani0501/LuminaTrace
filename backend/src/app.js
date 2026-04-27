@@ -15,6 +15,7 @@ import logsRoute from "./modules/logs/logsRoute.js";
 import metricsRoute from "./modules/metrics/metricsRoute.js";
 import alertRoute from "./modules/alerts/alertRoute.js";
 import serverRoute from "./modules/servers/serverRoute.js";
+import spansRoute from "./modules/spans/spansRoute.js";
 import {
   connectProducer,
   disconnectProducer,
@@ -102,6 +103,8 @@ export async function buildApp() {
   await fastify.register(alertRoute);
 
   await fastify.register(serverRoute);
+  
+  await fastify.register(spansRoute);
 
   if (config.app.env !== "test") {
     startBackgroundJobs();
