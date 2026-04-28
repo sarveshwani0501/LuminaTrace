@@ -95,3 +95,20 @@ export async function updateServerHeartBeat(projectId, serverData) {
 
   return serverId;
 }
+
+
+export function enrichSpan(projectId, spanData) {
+  return {
+    projectId: projectId,
+    traceId: spanData.traceId,
+    spanId: spanData.spanId,
+    serverId: spanData.serverId || null,
+    parentSpanId: spanData.parentSpanId || null,
+    name: spanData.name,
+    startTime: spanData.startTime,
+    endTime: spanData.endTime,
+    durationMs: spanData.durationMs,
+    metadata: spanData.metadata || {},
+    hostname: spanData.hostname || null,
+  };
+}

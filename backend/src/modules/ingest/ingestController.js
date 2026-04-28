@@ -60,3 +60,22 @@ export async function heartbeat(req, reply) {
     throw error;
   }
 }
+
+export async function ingestSpans(req, reply) {
+  try {
+    const projectId = req.projectId;
+    const spans = req.body.spans;
+    const enrichedSpans = spans.map((span) =>
+      ingestService.enrichSpan(projectId, span)
+    );
+
+    await send(topics.SPANS, enrichedSpans);
+
+    return reply.code(202).send({
+      message: "Spans Accepted",
+      accepted: enrichedSpans.length,
+    });
+  } catch (error) {
+    throw error;
+  }
+}

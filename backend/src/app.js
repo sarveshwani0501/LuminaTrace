@@ -23,6 +23,7 @@ import {
 } from "./kafka/producer.js";
 import { startLogsWorker } from "./kafka/workers/logsWorker.js";
 import { startMetricsWorker } from "./kafka/workers/metricsWorker.js";
+import { startSpansWorker } from "./kafka/workers/spansWorker.js";
 import redis from "./config/redis.js";
 import { startBackgroundJobs } from "./jobs/index.js";
 import { initializeSocketServer } from "./sockets/socket.server.js";
@@ -76,6 +77,13 @@ export async function buildApp() {
     fastify.log.info("Metrics worker started successfully");
   } catch (error) {
     fastify.log.error({ error }, "Failed to start metrics worker");
+  }
+
+  try {
+    await startSpansWorker();
+    fastify.log.info("Spans worker started successfully");
+  } catch (error) {
+    fastify.log.error({ error }, "Failed to start spans worker");
   }
 
   fastify.addHook("onClose", async () => {

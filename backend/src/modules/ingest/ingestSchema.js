@@ -98,3 +98,56 @@ export const heartBeatSchema = {
     },
   },
 };
+
+export const spansSchema = {
+  body: {
+    type: "object",
+    required: ["spans"],
+    properties: {
+      spans: {
+        type: "array",
+        minItems: 1,
+        maxItems: 100,
+        items: {
+          type: "object",
+          required: ["traceId", "spanId"],
+          properties: {
+            traceId: {
+              type: "string",
+            },
+            spanId: {
+              type: "string",
+            },
+            parentSpanId: {
+              type: "string",
+            },
+            name: {
+              type: "string",
+            },
+            startTime: {
+              type: "string",
+            },
+            endTime: {
+              type: "string",
+            },
+            durationMs: {
+              type: "number",
+            },
+            hostname: {
+              type: "string",
+            },
+          },
+        },
+      },
+    },
+  },
+  response: {
+    202: {
+      type: "object",
+      properties: {
+        message: { type: "string" },
+        accepted: { type: "number" },
+      },
+    },
+  },
+};

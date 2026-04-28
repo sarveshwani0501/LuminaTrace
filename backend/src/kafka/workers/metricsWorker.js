@@ -145,7 +145,7 @@ export async function startMetricsWorker() {
           "Metrics processed successfully",
         );
       } catch (err) {
-        logger.error({ err, metric }, "Failed to process metric message");
+        logger.error({ err, span }, "Failed to process span message");
       }
     },
   });

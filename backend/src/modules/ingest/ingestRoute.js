@@ -1,6 +1,11 @@
 import * as ingestController from "./ingestController.js";
 import authenticateKey from "../../middlewares/authenticateKey.js";
-import { logSchema, metricsSchema, heartBeatSchema } from "./ingestSchema.js";
+import {
+  logSchema,
+  metricsSchema,
+  heartBeatSchema,
+  spansSchema,
+} from "./ingestSchema.js";
 
 export default async function ingestRoute(fastify) {
   fastify.post(
@@ -28,5 +33,14 @@ export default async function ingestRoute(fastify) {
       preHandler: [authenticateKey],
     },
     ingestController.heartbeat,
+  );
+
+  fastify.post(
+    "/ingest/spans",
+    {
+      schema: spansSchema,
+      preHandler: [authenticateKey],
+    },
+    ingestController.ingestSpans,
   );
 }
