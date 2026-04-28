@@ -1,27 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Clock, AlertCircle, Database, Server, Cpu, Layers, Link as LinkIcon, Info } from 'lucide-react';
+import { X, Clock, AlertCircle, Database, Server, Cpu, Layers, Link as LinkIcon, Info, Loader2 } from 'lucide-react';
+import { spansApi } from '../../api/spans';
 
-const TraceWaterfallModal = ({ traceId, onClose }) => {
+const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
   const [spans, setSpans] = useState([]);
   const [totalDuration, setTotalDuration] = useState(1000);
   const [hoveredSpan, setHoveredSpan] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!traceId) return;
-    
-    // Simulating deep nested APM trace query based on the active traceId
-    const mockSpans = [
-      { id: 'sp_root', parent: null, name: '[POST] /api/v1/auth/login', service: 'gateway-node-A', offset: 0, duration: 852, level: 'INFO', depth: 0 },
-      { id: 'sp_auth', parent: 'sp_root', name: 'Verify JWT Signature', service: 'auth-master-01', offset: 15, duration: 240, level: 'INFO', depth: 1 },
-      { id: 'sp_redis', parent: 'sp_auth', name: 'Check Session Cache', service: 'redis-cache-03', offset: 35, duration: 180, level: 'WARN', depth: 2, meta: 'High memory pressure detected' },
-      { id: 'sp_db', parent: 'sp_auth', name: 'Fetch User Profile', service: 'postgres-db-writer', offset: 260, duration: 580, level: 'ERROR', depth: 2, meta: 'Connection timed out' },
-      { id: 'sp_emit', parent: 'sp_root', name: 'Emit Login Metric', service: 'event-broker', offset: 840, duration: 10, level: 'DEBUG', depth: 1 }
-    ];
+    if (!traceId || !projectId) return;
 
-    setSpans(mockSpans);
-    setTotalDuration(852); // Highest offset + duration
-  }, [traceId]);
+    const fetchSpans = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await spansApi.getSpansByTrace(traceId, projectId);
+        const data = res.data;
+        setSpans(data);
+        // totalDuration = the span with the largest offset + duration
+        if (data.length > 0) {
+          const max = data.reduce((acc, s) => Math.max(acc, s.offset + s.duration), 0);
+          setTotalDuration(max || 1);
+        }
+      } catch (err) {
+        setError('Failed to load trace spans.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSpans();
+  }, [traceId, projectId]);
 
   if (!traceId) return null;
 
@@ -89,8 +101,36 @@ const TraceWaterfallModal = ({ traceId, onClose }) => {
 
         {/* TRACE TIMELINE CANVAS */}
         <div className="flex-1 overflow-y-auto w-full no-scrollbar relative bg-[#0a0c10]">
+
+          {/* Loading State */}
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-[#0a0c10]">
+              <div className="flex flex-col items-center space-y-3">
+                <Loader2 className="w-8 h-8 text-[#818cf8] animate-spin" />
+                <span className="text-[#8b949e] text-sm font-mono">Fetching trace spans...</span>
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && !loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-[#0a0c10]">
+              <div className="flex flex-col items-center space-y-3">
+                <AlertCircle className="w-8 h-8 text-[#ef4444]" />
+                <span className="text-[#ef4444] text-sm font-mono">{error}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loading && !error && spans.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-[#0a0c10]">
+              <span className="text-[#4b5563] text-sm font-mono">No spans recorded for this trace yet.</span>
+            </div>
+          )}
           
           {/* Vertical Grid Lines */}
+          {!loading && spans.length > 0 && (
           <div className="absolute inset-y-0 right-0 w-[65%] pointer-events-none opacity-20">
             <div className="absolute top-0 bottom-0 left-0 border-l border-white/10"></div>
             <div className="absolute top-0 bottom-0 left-1/4 border-l border-white/10 border-dashed"></div>
@@ -98,6 +138,7 @@ const TraceWaterfallModal = ({ traceId, onClose }) => {
             <div className="absolute top-0 bottom-0 left-3/4 border-l border-white/10 border-dashed"></div>
             <div className="absolute top-0 bottom-0 right-0 border-r border-white/10"></div>
           </div>
+          )}
 
           {/* Span Lines Iterator */}
           <div className="w-full relative py-2">

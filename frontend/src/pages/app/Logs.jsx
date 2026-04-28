@@ -397,7 +397,8 @@ const Logs = () => {
       {/* RENDER WATERFALL MODAL */}
       {activeTraceId && (
         <TraceWaterfallModal 
-           traceId={activeTraceId} 
+           traceId={activeTraceId}
+           projectId={projectId}
            onClose={() => setActiveTraceId(null)} 
         />
       )}
