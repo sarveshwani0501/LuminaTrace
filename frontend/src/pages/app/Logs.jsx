@@ -54,14 +54,13 @@ const Logs = () => {
     try {
       // Pass the selected specific level if only one is chosen (backend strictly supports one string filter natively right now, we handle multi-select via client slice mostly unless extended)
       const primaryLevel = selectedLevels.length === 1 ? selectedLevels[0] : undefined;
-
+      console.log("Project ID: ", projectId);
       const [logsRes, volumeRes] = await Promise.allSettled([
          logsApi.getLogs(projectId, { timerange: timeRange, level: primaryLevel, limit: 150 }),
          logsApi.getVolume(projectId, timeRange)
       ]);
-
       if (logsRes.status === 'fulfilled') {
-        const d = logsRes.value.data?.data || logsRes.value.data || [];
+        const d = logsRes.value.data?.logs || [];
         setLogs(Array.isArray(d) ? d : []);
       }
       
@@ -296,7 +295,20 @@ const Logs = () => {
         {filteredLogs.length === 0 ? (
            <ChartEmpty label={isLoading ? "Loading logs..." : "No logs available. They will appear here when an agent transmits them."} />
         ) : (
-           <div className="flex-1 overflow-y-auto w-full p-2 space-y-1">
+           <div className="flex-1 flex flex-col w-full min-h-0">
+             {/* TABLE HEADER */}
+             <div className="flex items-center px-4 py-2 bg-[#161b22] border-b border-white/5 text-[10px] font-mono tracking-widest text-[#8b949e] uppercase select-none shrink-0 rounded-t-xl z-10 sticky top-0">
+                <div className="w-8 shrink-0"></div>
+                <div className="w-24 shrink-0">Time</div>
+                <div className="w-20 shrink-0 text-center">Level</div>
+                <div className="w-32 shrink-0">Server</div>
+                <div className="w-32 shrink-0 px-2">Trace ID</div>
+                <div className="w-32 shrink-0 px-2">Span ID</div>
+                <div className="flex-1 pl-4">Message</div>
+             </div>
+             
+             {/* LOG ITEMS */}
+             <div className="flex-1 overflow-y-auto w-full p-2 space-y-1">
              {filteredLogs.map((log) => {
                const isExpanded = expandedLogId === log.id;
                
@@ -311,22 +323,42 @@ const Logs = () => {
                  >
                    {/* ROW HEADER (Always Visible) */}
                    <div 
-                     className="px-4 py-2.5 flex items-center justify-between group cursor-pointer select-none"
+                     className="px-4 py-2.5 flex items-center group cursor-pointer select-none"
                      onClick={() => toggleAccordion(log.id)}
                    >
-                     {/* Left: Indicator, Time, Level, Server */}
-                     <div className="flex items-center w-[40%] space-x-4 shrink-0">
+                     {/* Indicator */}
+                     <div className="w-8 shrink-0 flex items-center justify-start">
                         <ChevronRight className={`w-4 h-4 text-[#8b949e] transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
-                        <span className="text-[#8b949e] font-mono text-[11px] w-24 shrink-0">{formatTime(log.time)}</span>
-                        <div className="w-16 shrink-0 flex justify-center">
-                          <span className={`px-2 py-0.5 border rounded text-[9px] font-bold tracking-wider w-full text-center ${getLevelBadge(log.level)}`}>
-                            {log.level || 'INFO'}
-                          </span>
-                        </div>
-                        <span className="text-[#c9d1d9] font-mono text-[11px] truncate">{log.server_name || log.server_hostname || 'Local-Node'}</span>
                      </div>
                      
-                     {/* Right: Message Preview */}
+                     {/* Time */}
+                     <div className="w-24 shrink-0 text-[#8b949e] font-mono text-[11px]">
+                       {formatTime(log.time)}
+                     </div>
+                     
+                     {/* Level */}
+                     <div className="w-20 shrink-0 flex justify-center px-2">
+                       <span className={`px-2 py-0.5 border rounded text-[9px] font-bold tracking-wider w-full text-center ${getLevelBadge(log.level)}`}>
+                         {log.level || 'INFO'}
+                       </span>
+                     </div>
+                     
+                     {/* Server */}
+                     <div className="w-32 shrink-0 text-[#c9d1d9] font-mono text-[11px] truncate pr-4" title={log.server_name || log.server_hostname || 'Local-Node'}>
+                       {log.server_name || log.server_hostname || 'Local-Node'}
+                     </div>
+
+                     {/* Trace ID */}
+                     <div className="w-32 shrink-0 text-[#a5b4fc] font-mono text-[11px] truncate px-2" title={log.trace_id}>
+                       {log.trace_id ? log.trace_id.substring(0, 8) + '...' : <span className="text-[#4b5563]">-</span>}
+                     </div>
+
+                     {/* Span ID */}
+                     <div className="w-32 shrink-0 text-[#818cf8] font-mono text-[11px] truncate px-2" title={log.span_id}>
+                       {log.span_id ? log.span_id.substring(0, 8) + '...' : <span className="text-[#4b5563]">-</span>}
+                     </div>
+                     
+                     {/* Message Preview */}
                      <div 
                        className={`flex-1 pl-4 text-xs font-semibold pr-2 transition-colors ${isExpanded ? 'text-white line-clamp-1' : 'text-[#8b949e] truncate group-hover:text-[#c9d1d9]'}`}
                        style={{ color: !isExpanded && log.level?.toUpperCase() === 'ERROR' ? '#fca5a5' : undefined }}
@@ -390,6 +422,7 @@ const Logs = () => {
                  </div>
                );
              })}
+             </div>
            </div>
         )}
       </div>

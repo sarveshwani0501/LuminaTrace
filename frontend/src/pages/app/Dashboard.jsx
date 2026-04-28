@@ -31,13 +31,18 @@ const Dashboard = () => {
     const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-        const [latestRes, cpuTimeRes, memTimeRes] = await Promise.all([
+        const [latestRes, cpuTimeRes, memTimeRes, recentLogsRes] = await Promise.all([
           metricsApi.getLatestMetrics(uiProject.id),
           metricsApi.getTimeseries(uiProject.id, 'cpu_usage', '1h'),
-          metricsApi.getTimeseries(uiProject.id, 'memory_used_percent', '1h')
+          metricsApi.getTimeseries(uiProject.id, 'memory_used_percent', '1h'),
+          logsApi.getRecentLogs(uiProject.id, 50)
         ]);
 
         const metricsList = latestRes.data?.metrics || [];
+        
+        if (recentLogsRes?.data?.logs) {
+          setLiveLogs(recentLogsRes.data.logs);
+        }
         
         // Find specific metrics
         const getMetricVal = (name) => {

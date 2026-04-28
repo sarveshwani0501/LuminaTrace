@@ -117,6 +117,9 @@ export async function startLogsWorker() {
           level: log.level,
           message: log.message.substring(0, 100),
           serverId: log.serverId,
+          trace_id: log.traceId || null,
+          span_id: log.spanId || null,
+          metadata: log.metadata || {},
         });
 
         await pushAndTrim(recentLogsKey, logsSummary, 100);
@@ -129,6 +132,9 @@ export async function startLogsWorker() {
           time: log.timestamp,
           level: log.level,
           message: log.message,
+          trace_id: log.traceId || null,
+          span_id: log.spanId || null,
+          metadata: log.metadata || {},
         });
 
         logger.debug(

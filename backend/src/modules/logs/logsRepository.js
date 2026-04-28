@@ -233,8 +233,8 @@ export async function getTopRoutes(
   SELECT
   metadata->>'route' AS route,
   metadata->>'method' AS method,
-  COUNT(*) AS request_count,
-  COUNT(*) FILTER (WHERE level = 'ERROR') AS error_count,
+  COUNT(*)::int AS request_count,
+  COUNT(*) FILTER (WHERE level = 'ERROR')::int AS error_count,
   (COUNT(*) FILTER (WHERE level = 'ERROR')::float / COUNT(*)::float * 100) as error_rate 
   FROM logs
   WHERE project_id = $1
@@ -261,7 +261,7 @@ export async function getLogVolumeOverTime(projectId, interval, from, to) {
     }
 
     const query = `SELECT time_bucket($1, time) AS time_bucket,
-  COUNT(*) AS log_count
+  COUNT(*)::int AS log_count
   FROM logs
   WHERE project_id = $2
   AND time >= $3
@@ -286,8 +286,8 @@ export async function getErrorRateOverTime(projectId, interval, from, to) {
     const query = `
   SELECT 
     time_bucket($1, time) AS bucket,
-    COUNT(*) as total_logs,
-    COUNT(*) FILTER (WHERE level = 'ERROR') as error_count,
+    COUNT(*)::int as total_logs,
+    COUNT(*) FILTER (WHERE level = 'ERROR')::int as error_count,
     (COUNT(*) FILTER (WHERE level = 'ERROR')::float / NULLIF(COUNT(*), 0)::float * 100) as error_rate
   FROM logs
   WHERE project_id = $2
