@@ -61,7 +61,13 @@ const Logs = () => {
       ]);
       if (logsRes.status === 'fulfilled') {
         const d = logsRes.value.data?.logs || [];
-        setLogs(Array.isArray(d) ? d : []);
+        setLogs(Array.isArray(d) ? d.map((log, i) => {
+          let meta = log.metadata;
+          if (typeof meta === 'string') {
+            try { meta = JSON.parse(meta); } catch(e) {}
+          }
+          return { ...log, id: log.id || `${log.time}-${i}`, metadata: meta };
+        }) : []);
       }
       
       if (volumeRes.status === 'fulfilled') {
@@ -96,9 +102,16 @@ const Logs = () => {
        if (selectedLevels.length > 0 && !selectedLevels.includes(log.level)) return;
        
        setLogs(prev => {
-          // Prevent duplicates
-          if (prev.find(p => p.id === log.id)) return prev;
-          return [log, ...prev].slice(0, 150); 
+          let meta = log.metadata;
+          if (typeof meta === 'string') {
+            try { meta = JSON.parse(meta); } catch(e) {}
+          }
+          const newLog = { ...log, id: log.id || `${log.time}-${Math.random().toString(36).substr(2, 9)}`, metadata: meta };
+          
+          // Prevent duplicates by checking trace_id/message/time combo if id doesn't match
+          if (prev.find(p => p.id === newLog.id || (p.time === newLog.time && p.message === newLog.message))) return prev;
+          
+          return [newLog, ...prev].slice(0, 150); 
        });
     });
 

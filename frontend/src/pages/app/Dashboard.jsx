@@ -31,11 +31,14 @@ const Dashboard = () => {
     const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-        const [latestRes, cpuTimeRes, memTimeRes, recentLogsRes] = await Promise.all([
+        const [latestRes, cpuTimeRes, memTimeRes, recentLogsRes, errorTimeRes, topRoutesRes, serversRes] = await Promise.all([
           metricsApi.getLatestMetrics(uiProject.id),
           metricsApi.getTimeseries(uiProject.id, 'cpu_usage', '1h'),
           metricsApi.getTimeseries(uiProject.id, 'memory_used_percent', '1h'),
-          logsApi.getRecentLogs(uiProject.id, 50)
+          logsApi.getRecentLogs(uiProject.id, 50),
+          metricsApi.getTimeseries(uiProject.id, 'error_count', '1h'),
+          logsApi.getTopRoutes(uiProject.id, '24h', 10),
+          serversApi.listServers(uiProject.id)
         ]);
 
         const metricsList = latestRes.data?.metrics || [];
@@ -44,38 +47,50 @@ const Dashboard = () => {
           setLiveLogs(recentLogsRes.data.logs);
         }
         
+        if (topRoutesRes?.data?.routes) {
+          setTopRoutes(topRoutesRes.data.routes);
+        }
+
+        const errorData = errorTimeRes.data?.data || [];
+        const totalErrors = errorData.reduce((acc, curr) => acc + parseInt(curr.error_count || 0, 10), 0);
+        
         // Find specific metrics
         const getMetricVal = (name) => {
           const m = metricsList.find(x => x.name === name);
           return m ? parseFloat(m.value) : 0;
         };
 
+        const activeServersList = serversRes?.data?.servers?.filter(s => s.status === 'online') || [];
+
         setStats(prev => ({
           ...prev,
+          errors: totalErrors,
           avgLatency: getMetricVal('response_time').toFixed(0),
           cpuLoad: getMetricVal('cpu_usage').toFixed(1),
-          memoryLoad: getMetricVal('memory_used_percent').toFixed(1)
+          memoryLoad: getMetricVal('memory_used_percent').toFixed(1),
+          activeServers: activeServersList.length
         }));
 
         // Zip timeseries arrays for Recharts
         const cpuData = cpuTimeRes.data?.data || [];
         const memData = memTimeRes.data?.data || [];
        
-        // We assume buckets align, but practically we should index them
         const timeMap = {};
         
         cpuData.forEach(d => {
+           const rawTime = new Date(d.time_bucket).getTime();
            const timeStr = new Date(d.time_bucket).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-           timeMap[timeStr] = { time: timeStr, cpu: parseFloat(d.avg_value || d.value).toFixed(2), memory: 0 };
+           timeMap[timeStr] = { rawTime, time: timeStr, cpu: parseFloat(d.avg_value || d.value).toFixed(2), memory: 0 };
         });
 
         memData.forEach(d => {
+           const rawTime = new Date(d.time_bucket).getTime();
            const timeStr = new Date(d.time_bucket).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-           if (!timeMap[timeStr]) timeMap[timeStr] = { time: timeStr, cpu: 0 };
+           if (!timeMap[timeStr]) timeMap[timeStr] = { rawTime, time: timeStr, cpu: 0 };
            timeMap[timeStr].memory = parseFloat(d.avg_value || d.value).toFixed(2);
         });
 
-        const mergedChart = Object.values(timeMap).sort((a,b) => a.time.localeCompare(b.time));
+        const mergedChart = Object.values(timeMap).sort((a,b) => a.rawTime - b.rawTime);
         setChartData(mergedChart);
         
         // Note: For Top Routes & Total Errors, those could be aggregated or pulled from Postgres when that analytics query is integrated.
@@ -121,15 +136,25 @@ const Dashboard = () => {
 
         // Format the new data point to fit the Dual-Line Recharts map
         const timeStr = typeof metric.time === 'string' 
-          ? new Date(metric.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-          : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          ? new Date(metric.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) 
+          : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
         setChartData(prev => {
-          const lastPoint = prev[prev.length - 1] || {};
+          const lastPoint = prev[prev.length - 1];
+          if (lastPoint && lastPoint.time === timeStr) {
+            // Update existing point to avoid duplicate dots on chart
+            const updatedPoint = { ...lastPoint };
+            if (metric.name === 'cpu_usage') updatedPoint.cpu = parseFloat(metric.value).toFixed(2);
+            if (metric.name === 'memory_used_percent') updatedPoint.memory = parseFloat(metric.value).toFixed(2);
+            const copy = [...prev];
+            copy[copy.length - 1] = updatedPoint;
+            return copy;
+          }
+
           const newPoint = {
             time: timeStr,
-            cpu: metric.name === 'cpu_usage' ? parseFloat(metric.value).toFixed(2) : (lastPoint.cpu || 0),
-            memory: metric.name === 'memory_used_percent' ? parseFloat(metric.value).toFixed(2) : (lastPoint.memory || 0)
+            cpu: metric.name === 'cpu_usage' ? parseFloat(metric.value).toFixed(2) : (lastPoint?.cpu || 0),
+            memory: metric.name === 'memory_used_percent' ? parseFloat(metric.value).toFixed(2) : (lastPoint?.memory || 0)
           };
           
           const updated = [...prev, newPoint];
@@ -196,8 +221,10 @@ const Dashboard = () => {
             <AlertCircle className="w-4 h-4 text-accent-error/60" />
           </div>
           <div className="flex items-end space-x-2">
-            <span className="text-4xl font-bold text-accent-error">1.2k</span>
-            <span className="text-sm font-medium text-text-muted mb-1">+12.3%</span>
+            <span className="text-4xl font-bold text-accent-error">
+              {stats.errors >= 1000 ? (stats.errors / 1000).toFixed(1) + 'k' : stats.errors}
+            </span>
+            <span className="text-sm font-medium text-text-muted mb-1">this hour</span>
           </div>
           {/* Subtle decoration */}
           <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-accent-error/5 rounded-full blur-xl group-hover:bg-accent-error/10 transition-colors"></div>
@@ -367,18 +394,16 @@ const Dashboard = () => {
               </div>
             ) : (
               topRoutes.map((route, i) => {
-                const maxLatency = 700;
-                const percent = Math.min((route.latency / maxLatency) * 100, 100);
                 return (
                   <div key={i} className="group">
                     <div className="flex justify-between font-mono text-[10px] mb-1.5">
-                      <span className="text-text-secondary truncate pr-4">{route.path || route.route}</span>
-                      <span className="text-text-muted whitespace-nowrap">{route.latency}ms - <span className="text-primary">{route.count} reqs</span></span>
+                      <span className="text-text-secondary truncate pr-4">[{route.method || 'GET'}] {route.path || route.route}</span>
+                      <span className="text-text-muted whitespace-nowrap">{parseFloat(route.error_rate || 0).toFixed(1)}% errors - <span className="text-primary">{route.request_count || route.count || 0} reqs</span></span>
                     </div>
                     <div className="w-full bg-background rounded-full h-1">
                       <div 
-                        className={`h-1 rounded-full ${route.latency > 400 ? 'bg-accent-error' : route.latency > 150 ? 'bg-accent-warning' : 'bg-primary'}`} 
-                        style={{ width: `${percent}%` }}
+                        className={`h-1 rounded-full ${parseFloat(route.error_rate) > 5 ? 'bg-accent-error' : parseFloat(route.error_rate) > 0 ? 'bg-accent-warning' : 'bg-primary'}`} 
+                        style={{ width: `${Math.min(parseFloat(route.error_rate) || 1, 100)}%` }}
                       ></div>
                     </div>
                   </div>

@@ -12,7 +12,7 @@ const AVAILABLE_METRICS = [
   { id: 'response_time', label: 'API Latency', unit: 'ms', placeholder: 'e.g. 1500', defaultCondition: '>', min: 0, max: 60000 },
   { id: 'active_connections', label: 'DB/Active Connections', unit: 'count', placeholder: 'e.g. 500', defaultCondition: '>', min: 0, max: 100000 },
   { id: 'error_count', label: 'Error Count', unit: 'count', placeholder: 'e.g. 50', defaultCondition: '>', min: 0, max: 100000 },
-  { id: 'request_count', label: 'Request Volume', unit: 'count', placeholder: 'e.g. 10000', defaultCondition: '>', min: 0, max: 1000000 },
+  { id: 'http_request_count', label: 'Request Volume', unit: 'count', placeholder: 'e.g. 10000', defaultCondition: '>', min: 0, max: 1000000 },
 ];
 
 const CONDITION_OPTIONS = [

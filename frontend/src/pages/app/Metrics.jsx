@@ -7,12 +7,13 @@ import {
 import { Clock, Filter, ChevronRight, ChevronDown, Activity, Zap, Server, Loader, Cpu, Hash, BarChart3, Check, BarChart2 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { metricsApi } from '../../api/metrics';
+import { serversApi } from '../../api/servers';
 
 // Helper: parse a timeseries API response into { time, val } chart points
 // Handles both avg_value (timeseries) and p99_value (P99 endpoint) field names
 const parseTimeseries = (data = []) =>
   data.map(d => ({
-    time: new Date(d.time_bucket || d.bucket || d.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    time: new Date(d.time_bucket || d.bucket || d.time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
     val: parseFloat(d.p99_value ?? d.avg_value ?? d.value ?? 0)
   })).filter(d => !isNaN(d.val));
 
@@ -30,10 +31,9 @@ const Metrics = () => {
   const [visType, setVisType] = useState('lines');
   const [timeRange, setTimeRange] = useState('1h');
   const [isTimeDropdownOpen, setIsTimeDropdownOpen] = useState(false);
-  const [expandedDimension, setExpandedDimension] = useState('');
-  const [customTags, setCustomTags] = useState([]);
-  const [isAddingTag, setIsAddingTag] = useState(false);
-  const [newTagInput, setNewTagInput] = useState('');
+  const [servers, setServers] = useState([]);
+  const [selectedServerId, setSelectedServerId] = useState('');
+  const [isServerDropdownOpen, setIsServerDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // Chart data states
@@ -55,14 +55,15 @@ const Metrics = () => {
     setIsTimeDropdownOpen(false);
 
     try {
-      const [latestRes, cpuRes, memRes, p99Res, throughputRes, errorRateRes, connectionsRes] = await Promise.allSettled([
-        metricsApi.getLatestMetrics(currentProject.id),
-        metricsApi.getTimeseries(currentProject.id, 'cpu_usage', timeRange),
-        metricsApi.getTimeseries(currentProject.id, 'memory_used_percent', timeRange),
-        metricsApi.getTimeseriesP99(currentProject.id, timeRange),
-        metricsApi.getThroughput(currentProject.id, timeRange),
-        metricsApi.getErrorRate(currentProject.id, timeRange),
-        metricsApi.getActiveConnections(currentProject.id, timeRange),
+      const [latestRes, cpuRes, memRes, p99Res, throughputRes, errorRateRes, connectionsRes, serversRes] = await Promise.allSettled([
+        metricsApi.getLatestMetrics(currentProject.id, selectedServerId || null),
+        metricsApi.getTimeseries(currentProject.id, 'cpu_usage', timeRange, selectedServerId || null),
+        metricsApi.getTimeseries(currentProject.id, 'memory_used_percent', timeRange, selectedServerId || null),
+        metricsApi.getTimeseriesP99(currentProject.id, timeRange, selectedServerId || null),
+        metricsApi.getThroughput(currentProject.id, timeRange, selectedServerId || null),
+        metricsApi.getErrorRate(currentProject.id, timeRange, selectedServerId || null),
+        metricsApi.getActiveConnections(currentProject.id, timeRange, selectedServerId || null),
+        serversApi.listServers(currentProject.id)
       ]);
 
       // KPI stats from latest metrics
@@ -88,13 +89,14 @@ const Metrics = () => {
       if (throughputRes.status === 'fulfilled') setThroughputData(parseTimeseries(throughputRes.value.data?.data || []));
       if (errorRateRes.status === 'fulfilled') setErrorData(parseTimeseries(errorRateRes.value.data?.data || []));
       if (connectionsRes.status === 'fulfilled') setConnectionsData(parseTimeseries(connectionsRes.value.data?.data || []));
+      if (serversRes.status === 'fulfilled') setServers(serversRes.value.data?.servers || []);
 
     } catch (err) {
       console.error('Metrics fetch failed', err);
     } finally {
       setIsLoading(false);
     }
-  }, [currentProject?.id, timeRange]);
+  }, [currentProject?.id, timeRange, selectedServerId]);
 
   useEffect(() => {
     fetchAll();
@@ -154,16 +156,6 @@ const Metrics = () => {
     return null;
   };
 
-  // Renders either a real chart or the empty state based on data availability
-  const renderChart = (data, chartEl, emptyLabel) => {
-    if (!data || data.length === 0) return <ChartEmpty label={emptyLabel} />;
-    return (
-      <ResponsiveContainer width="100%" height="100%">
-        {chartEl}
-      </ResponsiveContainer>
-    );
-  };
-
   const MetricCard = ({ title, value, unit, icon: Icon, color, data, chart, emptyLabel }) => (
     <div className="bg-[#11151c] border border-[rgba(255,255,255,0.05)] rounded-xl p-5 shadow-lg relative flex flex-col justify-between h-[280px]">
       <div className="relative z-20">
@@ -214,7 +206,10 @@ const Metrics = () => {
               </div>
               
               {isTimeDropdownOpen && (
-                <div className="absolute top-10 right-0 w-40 bg-[#161b22] border border-[#2d333b] rounded-lg shadow-xl z-50 overflow-hidden">
+                <div className="absolute top-10 right-0 w-48 bg-[#161b22] border border-[#2d333b] rounded-lg shadow-xl z-50 overflow-hidden">
+                  <div className="px-4 py-2 text-[9px] text-[#8b949e] font-mono tracking-wider border-b border-[#2d333b] uppercase bg-[#0d1117]">
+                    Larger ranges use wider buckets
+                  </div>
                   {['15m', '1h', '6h', '24h', '7d'].map((t) => (
                     <div 
                       key={t}
@@ -411,80 +406,41 @@ const Metrics = () => {
 
         <div className="p-5 flex-1 overflow-y-auto space-y-8">
           
-          {/* Dimensions */}
-          <div className="space-y-3">
-            <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase">Dimensions</span>
-            <div className="space-y-2">
-              {['Server Node', 'Endpoint Path', 'HTTP Method'].map((dim) => {
-                const isOpen = expandedDimension === dim;
-                return (
-                  <div key={dim}>
-                    <div 
-                      onClick={() => setExpandedDimension(isOpen ? '' : dim)}
-                      className={`flex justify-between items-center bg-[#1c212b] border ${isOpen ? 'border-[#818cf8]' : 'border-[#2d333b] hover:border-[#818cf8]'} px-4 py-2.5 rounded-lg cursor-pointer transition-colors group`}
-                    >
-                      <span className={`text-sm font-medium ${isOpen ? 'text-white' : 'text-[#c9d1d9]'}`}>{dim}</span>
-                      {isOpen 
-                        ? <div className="w-3 h-3 rounded-full border-[3px] border-[#818cf8]"></div>
-                        : <ChevronRight className="w-3 h-3 text-[#8b949e]" />
-                      }
-                    </div>
-                    {isOpen && (
-                      <div className="mt-1 bg-[#161b22] border border-[#2d333b] rounded-lg p-2">
-                        <p className="text-[10px] text-[#8b949e] font-mono text-center py-2">
-                          Available once servers connect
-                        </p>
-                      </div>
-                    )}
+          {/* Node Filter */}
+          <div className="space-y-3 relative">
+            <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase">Node Targeting</span>
+            
+            <div 
+              onClick={() => setIsServerDropdownOpen(!isServerDropdownOpen)}
+              className={`flex justify-between items-center bg-[#1c212b] border ${isServerDropdownOpen ? 'border-[#818cf8]' : 'border-[#2d333b] hover:border-[#818cf8]'} px-4 py-2.5 rounded-lg cursor-pointer transition-colors group relative`}
+            >
+              <span className={`text-sm font-medium ${isServerDropdownOpen ? 'text-white' : 'text-[#c9d1d9]'}`}>
+                {selectedServerId ? servers.find(s => s.id === selectedServerId)?.name || 'Unknown Node' : 'All Servers'}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-[#8b949e] transition-transform ${isServerDropdownOpen ? 'rotate-180' : ''}`} />
+            </div>
+            
+            {isServerDropdownOpen && (
+              <div className="absolute top-[60px] left-0 right-0 bg-[#161b22] border border-[#2d333b] rounded-lg shadow-xl z-50 overflow-hidden">
+                <div 
+                  onClick={() => { setSelectedServerId(''); setIsServerDropdownOpen(false); }}
+                  className={`px-4 py-3 text-sm cursor-pointer flex items-center justify-between ${!selectedServerId ? 'text-white bg-[#1c212b]' : 'text-[#8b949e] hover:bg-[#1c212b] hover:text-white'}`}
+                >
+                  <span>All Servers</span>
+                  {!selectedServerId && <Check className="w-4 h-4 text-[#c084fc]" />}
+                </div>
+                {servers.map((server) => (
+                  <div 
+                    key={server.id}
+                    onClick={() => { setSelectedServerId(server.id); setIsServerDropdownOpen(false); }}
+                    className={`px-4 py-3 text-sm cursor-pointer flex items-center justify-between ${selectedServerId === server.id ? 'text-white bg-[#1c212b]' : 'text-[#8b949e] hover:bg-[#1c212b] hover:text-white'}`}
+                  >
+                    <span>{server.name}</span>
+                    {selectedServerId === server.id && <Check className="w-4 h-4 text-[#c084fc]" />}
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Custom Tags */}
-          <div className="space-y-3">
-            <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase">Custom Tags</span>
-            <div className="flex flex-wrap gap-2">
-              {customTags.map(tag => (
-                <div 
-                  key={tag} 
-                  onClick={() => setCustomTags(customTags.filter(t => t !== tag))}
-                  className="flex items-center bg-[#1c212b] border border-[#2d333b] px-2 py-1 rounded text-xs text-[#c9d1d9] font-mono cursor-pointer hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-colors"
-                >
-                  {tag} <span className="ml-2 opacity-50">×</span>
-                </div>
-              ))}
-
-              {isAddingTag ? (
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  const isValid = /^[a-zA-Z0-9_]+:[a-zA-Z0-9_\-.]+$/.test(newTagInput);
-                  if (isValid && !customTags.includes(newTagInput)) {
-                    setCustomTags([...customTags, newTagInput]);
-                    setNewTagInput('');
-                    setIsAddingTag(false);
-                  }
-                }}>
-                  <input 
-                    autoFocus
-                    type="text"
-                    placeholder="key:value"
-                    value={newTagInput}
-                    onChange={(e) => setNewTagInput(e.target.value)}
-                    onBlur={() => setIsAddingTag(false)}
-                    className="bg-[#0a0c10] border border-[#818cf8] px-2 py-1 rounded text-xs text-white font-mono focus:outline-none w-28"
-                  />
-                </form>
-              ) : (
-                <div 
-                  onClick={() => setIsAddingTag(true)}
-                  className="flex items-center border border-dashed border-[#8b949e] px-2 py-1 rounded text-xs text-[#8b949e] font-mono cursor-pointer hover:border-white hover:text-white transition-colors"
-                >
-                  + Add Filter
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Visualization Type */}

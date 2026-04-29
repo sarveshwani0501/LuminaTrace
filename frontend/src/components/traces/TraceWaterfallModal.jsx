@@ -22,7 +22,7 @@ const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
         setSpans(data);
         // totalDuration = the span with the largest offset + duration
         if (data.length > 0) {
-          const max = data.reduce((acc, s) => Math.max(acc, s.offset + s.duration), 0);
+          const max = data.reduce((acc, s) => Math.max(acc, Number(s.offset) + Number(s.duration)), 0);
           setTotalDuration(max || 1);
         }
       } catch (err) {
@@ -54,8 +54,8 @@ const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
     }
   };
 
-  const calculateWidth = (dur) => `${Math.max((dur / totalDuration) * 100, 0.5)}%`;
-  const calculateLeft = (offset) => `${(offset / totalDuration) * 100}%`;
+  const calculateWidth = (dur) => `${Math.max((Number(dur) / totalDuration) * 100, 0.5)}%`;
+  const calculateLeft = (offset) => `${(Number(offset) / totalDuration) * 100}%`;
 
   const modalContent = (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm shadow-[0_0_100px_rgba(0,0,0,1)]">
