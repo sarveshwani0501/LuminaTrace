@@ -36,11 +36,11 @@ export async function getSpansByTrace(traceId, projectId) {
   });
 
   spans.forEach((span) => {
-    const mappedSpans = spansMap.get(span.span_id);
+    const mappedSpan = spansMap.get(span.span_id);
     if (span.parent_span_id && spansMap.has(span.parent_span_id)) {
       spansMap.get(span.parent_span_id).children.push(mappedSpan);
     } else {
-      rootSpans.push(mappedSpans);
+      rootSpans.push(mappedSpan);
     }
   });
 

@@ -18,10 +18,12 @@ export { transporter };
 // Checking if any alert exists for the current situation
 
 export function evaluateRule(rule, currValue) {
-  if (rule.condition === "gt") {
+  if (rule.condition === ">" || rule.condition === "gt") {
     return currValue > rule.threshold;
-  } else if (rule.condition === "lt") {
+  } else if (rule.condition === "<" || rule.condition === "lt") {
     return currValue < rule.threshold;
+  } else if (rule.condition === "==" || rule.condition === "eq") {
+    return currValue === rule.threshold;
   }
   return false;
 }

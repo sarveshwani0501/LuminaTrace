@@ -119,7 +119,7 @@ export const spansSchema = {
               type: "string",
             },
             parentSpanId: {
-              type: "string",
+              type: ["string", "null"],
             },
             name: {
               type: "string",

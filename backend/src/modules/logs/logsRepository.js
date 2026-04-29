@@ -231,17 +231,19 @@ export async function getTopRoutes(
 
     const query = `
   SELECT
-  metadata->>'route' AS route,
-  metadata->>'method' AS method,
+  REGEXP_REPLACE(COALESCE(metadata->>'route', metadata->>'path'), '/\\d+', '/:id', 'g') AS route,
+  COALESCE(metadata->>'method', 'GET') AS method,
   COUNT(*)::int AS request_count,
   COUNT(*) FILTER (WHERE level = 'ERROR')::int AS error_count,
   (COUNT(*) FILTER (WHERE level = 'ERROR')::float / COUNT(*)::float * 100) as error_rate 
   FROM logs
   WHERE project_id = $1
-   AND metadata->>'route' IS NOT NULL
+   AND COALESCE(metadata->>'route', metadata->>'path') IS NOT NULL
    AND time >= $2
    AND time <= $3
-  GROUP BY route, method
+  GROUP BY 
+    REGEXP_REPLACE(COALESCE(metadata->>'route', metadata->>'path'), '/\\d+', '/:id', 'g'), 
+    COALESCE(metadata->>'method', 'GET')
   ORDER BY ${orderBy} DESC
   LIMIT $4
   `;
