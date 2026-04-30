@@ -24,6 +24,7 @@ export async function getAll(orgId) {
       projects.retention_days, 
       projects.created_at, 
       projects.created_by,
+      projects.api_key_preview,
       users.full_name as created_by_name,
       users.email as created_by_email
     FROM projects

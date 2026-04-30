@@ -28,9 +28,21 @@ export async function validateAPIKey(apiKey) {
 }
 
 export function enrichLog(log, projectId) {
+  let validTimestamp = new Date().toISOString();
+  if (log.timestamp) {
+    const parsed = new Date(
+      !isNaN(log.timestamp) && typeof log.timestamp !== 'boolean'
+        ? Number(log.timestamp)
+        : log.timestamp
+    );
+    if (!isNaN(parsed.getTime())) {
+      validTimestamp = parsed.toISOString();
+    }
+  }
+
   return {
     projectId: projectId,
-    timestamp: log.timestamp,
+    timestamp: validTimestamp,
     serverId: log.serverId || null,
     hostname: log.hostname || null,
     level: log.level,
@@ -42,9 +54,21 @@ export function enrichLog(log, projectId) {
 }
 
 export function enrichMetrics(metricData, projectId) {
+  let validTimestamp = new Date().toISOString();
+  if (metricData.timestamp) {
+    const parsed = new Date(
+      !isNaN(metricData.timestamp) && typeof metricData.timestamp !== 'boolean'
+        ? Number(metricData.timestamp)
+        : metricData.timestamp
+    );
+    if (!isNaN(parsed.getTime())) {
+      validTimestamp = parsed.toISOString();
+    }
+  }
+
   return {
     projectId: projectId,
-    timestamp: metricData.timestamp,
+    timestamp: validTimestamp,
     name: metricData.name,
     value: metricData.value,
     unit: metricData.unit,
@@ -98,6 +122,30 @@ export async function updateServerHeartBeat(projectId, serverData) {
 
 
 export function enrichSpan(projectId, spanData) {
+  let validStartTime = new Date().toISOString();
+  if (spanData.startTime) {
+    const parsedStart = new Date(
+      !isNaN(spanData.startTime) && typeof spanData.startTime !== 'boolean'
+        ? Number(spanData.startTime)
+        : spanData.startTime
+    );
+    if (!isNaN(parsedStart.getTime())) {
+      validStartTime = parsedStart.toISOString();
+    }
+  }
+
+  let validEndTime = new Date().toISOString();
+  if (spanData.endTime) {
+    const parsedEnd = new Date(
+      !isNaN(spanData.endTime) && typeof spanData.endTime !== 'boolean'
+        ? Number(spanData.endTime)
+        : spanData.endTime
+    );
+    if (!isNaN(parsedEnd.getTime())) {
+      validEndTime = parsedEnd.toISOString();
+    }
+  }
+
   return {
     projectId: projectId,
     traceId: spanData.traceId,
@@ -105,8 +153,8 @@ export function enrichSpan(projectId, spanData) {
     serverId: spanData.serverId || null,
     parentSpanId: spanData.parentSpanId || null,
     name: spanData.name,
-    startTime: spanData.startTime,
-    endTime: spanData.endTime,
+    startTime: validStartTime,
+    endTime: validEndTime,
     durationMs: spanData.durationMs,
     metadata: spanData.metadata || {},
     hostname: spanData.hostname || null,

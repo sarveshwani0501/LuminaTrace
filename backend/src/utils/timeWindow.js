@@ -1,5 +1,6 @@
 export function getIntervalForWindow(timeRange) {
   const intervals = {
+    "15m": "1 minute",
     "30m": "5 minutes",
     "1h": "5 minutes",
     "6h": "15 minutes",
@@ -15,6 +16,7 @@ export function parseTimeRange(timeRange) {
   const now = new Date();
 
   const durations = {
+    "15m": 15 * 60 * 1000,
     "30m": 30 * 60 * 1000,
     "1h": 60 * 60 * 1000,
     "6h": 6 * 60 * 60 * 1000,

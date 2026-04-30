@@ -99,7 +99,7 @@ export async function getMetricTimeSeries(
           AND m.metric_name = $5
           AND m.server_id = $6
         GROUP BY bucket, m.metric_name, m.unit, m.server_id, s.name, s.hostname, s.environment
-        ORDER BY bucket DESC`;
+        ORDER BY bucket ASC`;
       params = [interval, projectId, from, to, metricName, serverId];
     } else {
       query = `
@@ -117,7 +117,7 @@ export async function getMetricTimeSeries(
           AND m.time <= $4
           AND m.metric_name = $5
         GROUP BY bucket, m.metric_name, m.unit
-        ORDER BY bucket DESC`;
+        ORDER BY bucket ASC`;
       params = [interval, projectId, from, to, metricName];
     }
 
@@ -164,7 +164,7 @@ export async function getMetricTimeSeriesP99(
           AND m.metric_name = $5
           AND m.server_id = $6
         GROUP BY bucket, m.metric_name, m.unit, m.server_id, s.name, s.hostname, s.environment
-        ORDER BY bucket DESC`;
+        ORDER BY bucket ASC`;
       params = [interval, projectId, from, to, metricName, serverId];
     } else {
       query = `
@@ -179,7 +179,7 @@ export async function getMetricTimeSeriesP99(
           AND m.time <= $4
           AND m.metric_name = $5
         GROUP BY bucket, m.metric_name, m.unit
-        ORDER BY bucket DESC`;
+        ORDER BY bucket ASC`;
       params = [interval, projectId, from, to, metricName];
     }
 
@@ -205,10 +205,10 @@ export async function getMetricTimeSeriesP99(
       WHERE project_id = $2
         AND time >= $3
         AND time <= $4
-        AND metric_name = 'request_count'
+        AND metric_name = 'http_request_count'
         ${serverFilter}
       GROUP BY time_bucket
-      ORDER BY time_bucket DESC`;
+      ORDER BY time_bucket ASC`;
 
     const res = await pool.query(query, params);
     return res.rows || [];
@@ -236,10 +236,10 @@ export async function getMetricErrorRate(projectId, interval, from, to, serverId
       WHERE project_id = $2
         AND time >= $3
         AND time <= $4
-        AND metric_name IN ('error_count', 'request_count')
+        AND metric_name IN ('error_count', 'http_request_count')
         ${serverFilter}
       GROUP BY time_bucket
-      ORDER BY time_bucket DESC`;
+      ORDER BY time_bucket ASC`;
 
     const res = await pool.query(query, params);
     return res.rows || [];
