@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useSelector } from 'react-redux';
 import { AreaChart, Area, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis } from 'recharts';
 import { AlertCircle, Clock, Server, Activity, TerminalSquare, Route, BarChart2, Inbox } from 'lucide-react';
@@ -6,6 +6,31 @@ import { metricsApi } from '../../api/metrics';
 import { logsApi } from '../../api/logs';
 import { serversApi } from '../../api/servers';
 import { io } from 'socket.io-client';
+
+// Defined outside component — these are pure functions with no deps on state/props.
+// Defining them inside would recreate them on every render.
+const CustomTooltip = ({ active, payload }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-surface/90 border border-border p-2 rounded shadow-glass backdrop-blur-md">
+        <p className="text-xs text-text-muted mb-1">{payload[0].payload.time}</p>
+        <p className="text-sm font-semibold text-primary">CPU: {payload[0].value}%</p>
+        {payload[1] && <p className="text-sm font-semibold text-secondary">MEM: {payload[1].value}%</p>}
+      </div>
+    );
+  }
+  return null;
+};
+
+const renderLogLevel = (level) => {
+  switch (level?.toUpperCase()) {
+    case 'INFO': return <span className="text-primary font-bold">[INFO]</span>;
+    case 'WARN': return <span className="text-accent-warning font-bold">[WARN]</span>;
+    case 'ERROR': return <span className="text-accent-error bg-accent-error/10 px-1 rounded font-bold">[ERROR]</span>;
+    default: return <span className="text-text-muted font-bold">[{level}]</span>;
+  }
+};
+
 const Dashboard = () => {
   const { currentProject } = useSelector(state => state.project);
 
@@ -78,14 +103,16 @@ const Dashboard = () => {
         const timeMap = {};
         
         cpuData.forEach(d => {
-           const rawTime = new Date(d.time_bucket).getTime();
-           const timeStr = new Date(d.time_bucket).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+           const timeVal = d.time_bucket || d.bucket || d.time;
+           const rawTime = new Date(timeVal).getTime();
+           const timeStr = new Date(timeVal).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
            timeMap[timeStr] = { rawTime, time: timeStr, cpu: parseFloat(d.avg_value || d.value).toFixed(2), memory: 0 };
         });
 
         memData.forEach(d => {
-           const rawTime = new Date(d.time_bucket).getTime();
-           const timeStr = new Date(d.time_bucket).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+           const timeVal = d.time_bucket || d.bucket || d.time;
+           const rawTime = new Date(timeVal).getTime();
+           const timeStr = new Date(timeVal).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
            if (!timeMap[timeStr]) timeMap[timeStr] = { rawTime, time: timeStr, cpu: 0 };
            timeMap[timeStr].memory = parseFloat(d.avg_value || d.value).toFixed(2);
         });
@@ -114,27 +141,17 @@ const Dashboard = () => {
     })
 
     socket.on('connect', () => {
-      console.log('Socket connected', socket.id);
-      // Essential: Must instruct the backend to join the specific broadcast room!
       socket.emit('join_project', currentProject.id);
     });
 
-    socket.on('joined_project', (data) => {
-      console.log(`Now securely receiving live telemetry for project: ${data.projectId}`);
-    });
-
     socket.on('new_metric', (metric) => {
-      console.log('Live Metric: ', metric);
-
       if(metric.name === 'cpu_usage' || metric.name === 'memory_used_percent') {
         setStats(prev => ({
           ...prev,
           cpuLoad: metric.name === 'cpu_usage' ? parseFloat(metric.value).toFixed(1) : prev.cpuLoad,
           memoryLoad: metric.name === 'memory_used_percent' ? parseFloat(metric.value).toFixed(1) : prev.memoryLoad
-        }))
+        }));
 
-
-        // Format the new data point to fit the Dual-Line Recharts map
         const timeStr = typeof metric.time === 'string' 
           ? new Date(metric.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) 
           : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -142,7 +159,6 @@ const Dashboard = () => {
         setChartData(prev => {
           const lastPoint = prev[prev.length - 1];
           if (lastPoint && lastPoint.time === timeStr) {
-            // Update existing point to avoid duplicate dots on chart
             const updatedPoint = { ...lastPoint };
             if (metric.name === 'cpu_usage') updatedPoint.cpu = parseFloat(metric.value).toFixed(2);
             if (metric.name === 'memory_used_percent') updatedPoint.memory = parseFloat(metric.value).toFixed(2);
@@ -150,27 +166,26 @@ const Dashboard = () => {
             copy[copy.length - 1] = updatedPoint;
             return copy;
           }
-
           const newPoint = {
+            rawTime: metric.time ? new Date(metric.time).getTime() : Date.now(),
             time: timeStr,
             cpu: metric.name === 'cpu_usage' ? parseFloat(metric.value).toFixed(2) : (lastPoint?.cpu || 0),
             memory: metric.name === 'memory_used_percent' ? parseFloat(metric.value).toFixed(2) : (lastPoint?.memory || 0)
           };
-          
-          const updated = [...prev, newPoint];
-          // Limit exactly to last 60 points for a smooth sliding window
-          return updated.slice(-60);
+          return [...prev, newPoint].slice(-60);
         });
       }
-    })
+    });
 
 
     socket.on('new_log', (log) => {
       setLiveLogs(prev => {
-        const updated = [log, ...prev];
-        return updated.slice(0, 100);
-      })
-    })
+        // Normalise metadata if stringified
+        let meta = log.metadata;
+        if (typeof meta === 'string') { try { meta = JSON.parse(meta); } catch(e) {} }
+        return [{ ...log, metadata: meta }, ...prev].slice(0, 100);
+      });
+    });
 
 
     return () => {
@@ -178,31 +193,7 @@ const Dashboard = () => {
     }
   }, [uiProject?.id]);
 
-  // A tiny custom tooltip for the Recharts graph
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-surface/90 border border-border p-2 rounded shadow-glass backdrop-blur-md">
-          <p className="text-xs text-text-muted mb-1">{payload[0].payload.time} UTC</p>
-          <p className="text-sm font-semibold text-primary">CPU: {payload[0].value}%</p>
-          {payload[1] && <p className="text-sm font-semibold text-secondary">MEM: {payload[1].value}%</p>}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  /**
-   * Helper to colorize log levels
-   */
-  const renderLogLevel = (level) => {
-    switch (level?.toUpperCase()) {
-      case 'INFO': return <span className="text-primary font-bold">[INFO]</span>;
-      case 'WARN': return <span className="text-accent-warning font-bold">[WARN]</span>;
-      case 'ERROR': return <span className="text-accent-error bg-accent-error/10 px-1 rounded font-bold">[ERROR]</span>;
-      default: return <span className="text-text-muted font-bold">[{level}]</span>;
-    }
-  };
+  // CustomTooltip and renderLogLevel are defined at module scope above
 
   if (!uiProject) {
     return <div className="p-8 text-text-muted">Please select a project from the sidebar to view metrics.</div>;
@@ -270,9 +261,12 @@ const Dashboard = () => {
           </div>
           {/* Active node indicators */}
           <div className="flex space-x-1 mt-4">
-            {[...Array(Math.min(stats.activeServers || 5, 12))].map((_, i) => (
-              <div key={i} className="w-2 h-2 rounded-full bg-accent-success/80 animate-pulse" style={{ animationDelay: `${i * 100}ms` }}></div>
-            ))}
+            {stats.activeServers > 0
+              ? [...Array(Math.min(stats.activeServers, 12))].map((_, i) => (
+                  <div key={i} className="w-2 h-2 rounded-full bg-accent-success/80 animate-pulse" style={{ animationDelay: `${i * 100}ms` }}></div>
+                ))
+              : <span className="text-[10px] text-text-muted font-mono">No servers online</span>
+            }
           </div>
         </div>
 

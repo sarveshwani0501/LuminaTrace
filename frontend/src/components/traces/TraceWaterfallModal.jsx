@@ -69,7 +69,12 @@ const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
               <h2 className="text-xl font-bold text-white tracking-tight">Trace Waterfall</h2>
               <span className="px-2 py-0.5 bg-[#4b5563]/30 border border-[#4b5563]/50 rounded text-xs font-mono text-[#8b949e]">{traceId}</span>
             </div>
-            <p className="text-sm text-[#8b949e]">Root Method: <span className="text-white font-mono bg-white/5 px-1 py-0.5 rounded">[POST] /api/v1/auth/login</span></p>
+            <p className="text-sm text-[#8b949e]">
+              {spans.length > 0
+                ? <>Root: <span className="text-white font-mono bg-white/5 px-1 py-0.5 rounded">{spans[0]?.name || spans[0]?.service || 'Unknown'}</span></>
+                : <span className="text-[#4b5563]">Awaiting span data...</span>
+              }
+            </p>
           </div>
           
           <div className="flex items-center space-x-6">

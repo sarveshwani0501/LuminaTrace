@@ -25,6 +25,43 @@ const ChartEmpty = ({ label }) => (
   </div>
 );
 
+// Defined outside component — prevents recreation on every state change
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload?.length) {
+    return (
+      <div className="bg-[#161b22]/95 border border-[#2d333b] p-3 rounded-lg shadow-glass backdrop-blur-md">
+        <p className="text-xs text-[#8b949e] mb-2 font-mono">{label}</p>
+        <div className="flex items-center space-x-2 text-sm font-semibold">
+          <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: payload[0].color || payload[0].fill || '#818cf8' }}></div>
+          <span className="text-white">{parseFloat(payload[0].value).toFixed(2)}</span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
+const MetricCard = ({ title, value, unit, icon: Icon, color, data, chart, emptyLabel }) => (
+  <div className="bg-[#11151c] border border-[rgba(255,255,255,0.05)] rounded-xl p-5 shadow-lg relative flex flex-col justify-between h-[280px]">
+    <div className="relative z-20">
+      <div className="flex justify-between items-center mb-4">
+        <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase">{title}</span>
+        {Icon && <Icon className="w-4 h-4 text-[#8b949e]" />}
+      </div>
+      <div className="flex items-baseline space-x-1">
+        <span className="text-3xl font-bold tracking-tight text-white">{value}</span>
+        <span className="text-xs font-semibold" style={{ color }}>{unit}</span>
+      </div>
+    </div>
+    <div className="absolute bottom-0 left-0 w-full h-[140px] px-2 pb-2 z-10">
+      {!data || data.length === 0
+        ? <ChartEmpty label={emptyLabel || 'No data — send metrics via SDK to populate'} />
+        : chart
+      }
+    </div>
+  </div>
+);
+
 const Metrics = () => {
   const { currentProject } = useSelector(state => state.project);
 
@@ -66,30 +103,51 @@ const Metrics = () => {
         serversApi.listServers(currentProject.id)
       ]);
 
-      // KPI stats from latest metrics
+      // Parse all chart timeseries
+      const parsedCpu         = cpuRes.status         === 'fulfilled' ? parseTimeseries(cpuRes.value.data?.data         || []) : [];
+      const parsedMem         = memRes.status         === 'fulfilled' ? parseTimeseries(memRes.value.data?.data         || []) : [];
+      const parsedLatency     = p99Res.status         === 'fulfilled' ? parseTimeseries(p99Res.value.data?.data         || []) : [];
+      const parsedThroughput  = throughputRes.status  === 'fulfilled' ? parseTimeseries(throughputRes.value.data?.data  || []) : [];
+      const parsedError       = errorRateRes.status   === 'fulfilled' ? parseTimeseries(errorRateRes.value.data?.data   || []) : [];
+      const parsedConns       = connectionsRes.status === 'fulfilled' ? parseTimeseries(connectionsRes.value.data?.data || []) : [];
+
+      setCpuData(parsedCpu);
+      setMemData(parsedMem);
+      setLatencyData(parsedLatency);
+      setThroughputData(parsedThroughput);
+      setErrorData(parsedError);
+      setConnectionsData(parsedConns);
+      if (serversRes.status === 'fulfilled') setServers(serversRes.value.data?.servers || []);
+
+      // Derive KPI values — last data point of each series is the most recent value for the window
+      // Fall back to Redis/DB snapshot only when a series has no data at all
+      const lastVal = (arr) => arr.length > 0 ? parseFloat(arr[arr.length - 1].val).toFixed(1) : null;
+
+      let latestFallback = {};
       if (latestRes.status === 'fulfilled') {
         const metricsList = latestRes.value.data?.metrics || [];
         const get = (name) => {
           const m = metricsList.find(x => x.name === name);
-          return m ? parseFloat(m.value).toFixed(1) : '--';
+          return m ? parseFloat(m.value).toFixed(1) : null;
         };
-        setStats({
+        latestFallback = {
           latency: get('response_time'),
           cpu: get('cpu_usage'),
           mem: get('memory_used_percent'),
-          throughput: get('request_count'),
-          errorRate: get('error_rate'),
+          throughput: get('http_request_count'),
+          errorRate: get('error_rate') ?? get('error_count'),
           connections: get('active_connections'),
-        });
+        };
       }
 
-      if (cpuRes.status === 'fulfilled') setCpuData(parseTimeseries(cpuRes.value.data?.data || []));
-      if (memRes.status === 'fulfilled') setMemData(parseTimeseries(memRes.value.data?.data || []));
-      if (p99Res.status === 'fulfilled') setLatencyData(parseTimeseries(p99Res.value.data?.data || []));
-      if (throughputRes.status === 'fulfilled') setThroughputData(parseTimeseries(throughputRes.value.data?.data || []));
-      if (errorRateRes.status === 'fulfilled') setErrorData(parseTimeseries(errorRateRes.value.data?.data || []));
-      if (connectionsRes.status === 'fulfilled') setConnectionsData(parseTimeseries(connectionsRes.value.data?.data || []));
-      if (serversRes.status === 'fulfilled') setServers(serversRes.value.data?.servers || []);
+      setStats({
+        latency:     lastVal(parsedLatency)    ?? latestFallback.latency     ?? '--',
+        cpu:         lastVal(parsedCpu)        ?? latestFallback.cpu         ?? '--',
+        mem:         lastVal(parsedMem)        ?? latestFallback.mem         ?? '--',
+        throughput:  lastVal(parsedThroughput) ?? latestFallback.throughput  ?? '--',
+        errorRate:   lastVal(parsedError)      ?? latestFallback.errorRate   ?? '--',
+        connections: lastVal(parsedConns)      ?? latestFallback.connections ?? '--',
+      });
 
     } catch (err) {
       console.error('Metrics fetch failed', err);
@@ -124,8 +182,7 @@ const Metrics = () => {
         setLatencyData(prev => [...prev.slice(-59), { time: timeStr, val }]);
         setStats(prev => ({ ...prev, latency: val.toFixed(1) }));
       }
-      if (metric.name === 'request_count') {
-        // Append as a live throughput point (raw count per interval, not RPS, for live view)
+      if (metric.name === 'request_count' || metric.name === 'http_request_count') {
         setThroughputData(prev => [...prev.slice(-59), { time: timeStr, val }]);
         setStats(prev => ({ ...prev, throughput: val.toFixed(0) }));
       }
@@ -141,41 +198,6 @@ const Metrics = () => {
     return () => socket.disconnect();
   }, [currentProject?.id]);
 
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload?.length) {
-      return (
-        <div className="bg-[#161b22]/95 border border-[#2d333b] p-3 rounded-lg shadow-glass backdrop-blur-md">
-          <p className="text-xs text-[#8b949e] mb-2 font-mono">{label}</p>
-          <div className="flex items-center space-x-2 text-sm font-semibold">
-            <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: payload[0].color || payload[0].fill || '#818cf8' }}></div>
-            <span className="text-white">{parseFloat(payload[0].value).toFixed(2)}</span>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const MetricCard = ({ title, value, unit, icon: Icon, color, data, chart, emptyLabel }) => (
-    <div className="bg-[#11151c] border border-[rgba(255,255,255,0.05)] rounded-xl p-5 shadow-lg relative flex flex-col justify-between h-[280px]">
-      <div className="relative z-20">
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase">{title}</span>
-          {Icon && <Icon className="w-4 h-4 text-[#8b949e]" />}
-        </div>
-        <div className="flex items-baseline space-x-1">
-          <span className="text-3xl font-bold tracking-tight text-white">{value}</span>
-          <span className="text-xs font-semibold" style={{ color }}>{unit}</span>
-        </div>
-      </div>
-      <div className="absolute bottom-0 left-0 w-full h-[140px] px-2 pb-2 z-10">
-        {!data || data.length === 0
-          ? <ChartEmpty label={emptyLabel || 'No data — send metrics via SDK to populate'} />
-          : chart
-        }
-      </div>
-    </div>
-  );
 
   return (
     <div className="w-full flex h-[calc(100vh-80px)] overflow-hidden">

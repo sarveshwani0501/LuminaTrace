@@ -1,15 +1,56 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { 
-  ShieldCheck, Map, Users, Eye, EyeOff, Copy, 
-  Trash2, RotateCw, CheckCircle2, AlertTriangle, Send, X, Inbox
+  ShieldCheck, Map, Users, Copy, Check,
+  Trash2, RotateCw, CheckCircle2, AlertTriangle, Send, X, Inbox, KeyRound
 } from 'lucide-react';
 import { authApi } from '../../api/auth';
 import { projectApi } from '../../api/project';
 import { orgApi } from '../../api/org';
-// Assuming updates to names could trigger local redux refetches
 import { fetchProjects } from '../../store/slices/projectSlice';
 import { fetchOrganizations } from '../../store/slices/orgSlice';
+
+// Inline feedback hook
+const useFeedback = () => {
+  const [msg, setMsg] = useState(null); // { text, type: 'success'|'error' }
+  const show = (text, type = 'success') => {
+    setMsg({ text, type });
+    setTimeout(() => setMsg(null), 3500);
+  };
+  return [msg, show];
+};
+
+const CopyButton = ({ text, label }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      title={`Copy ${label}`}
+      className="p-2 text-[#8b949e] hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+    >
+      {copied ? <Check className="w-3.5 h-3.5 text-[#10b981]" /> : <Copy className="w-3.5 h-3.5" />}
+    </button>
+  );
+};
+
+const InlineFeedback = ({ msg }) => {
+  if (!msg) return null;
+  const isError = msg.type === 'error';
+  return (
+    <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
+      isError ? 'bg-[#450a0a] text-[#fca5a5] border border-[#7f1d1d]' : 'bg-[#064e3b]/40 text-[#34d399] border border-[#065f46]'
+    }`}>
+      {isError ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+      <span>{msg.text}</span>
+    </div>
+  );
+};
 
 // Reusable Empty State handler
 const ListEmpty = ({ label }) => (
@@ -103,12 +144,15 @@ const Settings = () => {
   const canDeleteProject = isOwner;
   const canManageMembers = isOwner;
 
-  // Masking logic
-  const renderApiKey = () => {
-     if (!currentProject) return "lu_live_********************************";
-     if (currentProject.api_key) return currentProject.api_key;
-     return "lu_live_********************************";
-  };
+  // api_key_preview is the first 12 chars of the real key (e.g. "lt_1028168a78")
+  // The full key is never returned by the backend after creation for security
+  const apiKeyDisplay = currentProject?.api_key_preview
+    ? `${currentProject.api_key_preview}${'*'.repeat(52)}`
+    : 'Not available — rotate to generate a new key';
+
+  const [pwdFeedback, showPwdFeedback] = useFeedback();
+  const [projFeedback, showProjFeedback] = useFeedback();
+  const [inviteFeedback, showInviteFeedback] = useFeedback();
 
   useEffect(() => {
     if (currentProject) {
@@ -143,15 +187,15 @@ const Settings = () => {
   const handlePwdSubmit = async (e) => {
     e.preventDefault();
     if (pwdForm.next !== pwdForm.confirm) {
-      alert("New passwords do not match.");
+      showPwdFeedback('New passwords do not match.', 'error');
       return;
     }
     try {
       await authApi.changePassword({ oldPassword: pwdForm.current, newPassword: pwdForm.next });
-      alert("Password successfully updated!");
+      showPwdFeedback('Password updated successfully.');
       setPwdForm({ current: '', next: '', confirm: '' });
     } catch (err) {
-      alert(err.response?.data?.message || err.response?.data?.error || "Failed to update password. Did you enter the correct current password?");
+      showPwdFeedback(err.response?.data?.message || 'Incorrect current password.', 'error');
     }
   };
 
@@ -159,10 +203,10 @@ const Settings = () => {
     if (!currentOrg || !currentProject || !projectNameInput) return;
     try {
       await projectApi.updateProject(currentOrg.id, currentProject.id, { name: projectNameInput });
-      dispatch(fetchProjects(currentOrg.id)); // Reload projects
-      alert("Project metadata saved successfully.");
+      dispatch(fetchProjects(currentOrg.id));
+      showProjFeedback('Project name saved.');
     } catch (err) {
-      alert("Error updating project name.");
+      showProjFeedback('Failed to update project name.', 'error');
     }
   };
 
@@ -170,21 +214,21 @@ const Settings = () => {
     try {
       await projectApi.rotateApiKey(currentOrg.id, currentProject.id);
       dispatch(fetchProjects(currentOrg.id));
-      alert("API Key successfully rotated.");
+      showProjFeedback('API key rotated. Update all connected services immediately.');
       setActiveDangerModal(null);
     } catch (err) {
-      alert("Error rotating API Key.");
+      showProjFeedback('Failed to rotate API key.', 'error');
     }
   };
 
   const handleDeleteProject = async () => {
     try {
       await projectApi.deleteProject(currentOrg.id, currentProject.id);
-      alert(`Project ${currentProject.name} was successfully deleted.`);
       setActiveDangerModal(null);
-      window.location.reload(); // Hard reset state
+      window.location.reload();
     } catch (err) {
-      alert("Error deleting Project.");
+      showProjFeedback('Failed to delete project.', 'error');
+      setActiveDangerModal(null);
     }
   };
 
@@ -195,9 +239,9 @@ const Settings = () => {
       await orgApi.createInvite(currentOrg.id, { email: inviteEmail, role: 'member' });
       setInviteEmail('');
       loadOrgData();
-      alert('Invitation envelope dispatched successfully!');
+      showInviteFeedback(`Invitation sent to ${inviteEmail}.`);
     } catch (err) {
-      alert(err.response?.data?.message || err.response?.data?.error || "Error sending invite.");
+      showInviteFeedback(err.response?.data?.message || 'Failed to send invitation.', 'error');
     }
   };
 
@@ -205,8 +249,9 @@ const Settings = () => {
     try {
       await orgApi.deleteInvite(currentOrg.id, inviteId);
       loadOrgData();
+      showInviteFeedback('Invitation revoked.');
     } catch (err) {
-      alert("Failed to revoke invite.");
+      showInviteFeedback('Failed to revoke invitation.', 'error');
     }
   };
 
@@ -215,7 +260,7 @@ const Settings = () => {
       await orgApi.removeMember(currentOrg.id, memberId);
       loadOrgData();
     } catch (err) {
-      alert("Failed to remove member.");
+      showInviteFeedback('Failed to remove member.', 'error');
     }
   };
 
@@ -306,10 +351,11 @@ const Settings = () => {
                
                {/* Project Details */}
                <div className="bg-[#11151c] border border-[#2d333b] rounded-xl p-8 shadow-sm">
-                  <h3 className="text-lg font-bold text-white mb-6">Project Metadata</h3>
+                  <h3 className="text-lg font-bold text-white mb-1">Project Details</h3>
+                  <p className="text-xs text-[#8b949e] mb-6">Basic metadata for this project workspace.</p>
                   <div className="grid grid-cols-2 gap-8">
                      <div>
-                        <label className="block text-xs font-mono text-[#8b949e] uppercase mb-2">Workspace Alias</label>
+                        <label className="block text-xs font-mono text-[#8b949e] uppercase mb-2">Project Name</label>
                         <input 
                            type="text" 
                            value={projectNameInput}
@@ -319,14 +365,16 @@ const Settings = () => {
                         />
                      </div>
                      <div>
-                        <label className="block text-xs font-mono text-[#8b949e] uppercase mb-2">Project Identity Tracker</label>
-                        <div className="text-[#8b949e] font-mono text-xs bg-[#0d1117] border border-transparent px-4 py-3 rounded-lg opacity-80 cursor-not-allowed select-all truncate">
-                           {currentProject.id}
+                        <label className="block text-xs font-mono text-[#8b949e] uppercase mb-2">Project ID</label>
+                        <div className="flex items-center bg-[#0d1117] border border-[#2d333b] rounded-lg pr-1">
+                           <div className="text-[#8b949e] font-mono text-xs px-4 py-2.5 flex-1 truncate select-all">{currentProject.id}</div>
+                           <CopyButton text={currentProject.id} label="Project ID" />
                         </div>
                      </div>
                   </div>
                   {canManageProject && (
-                     <div className="mt-6 flex justify-end">
+                     <div className="mt-6 flex items-center justify-end space-x-3">
+                        <InlineFeedback msg={projFeedback} />
                         <button onClick={handleUpdateProjectName} disabled={projectNameInput === currentProject.name} className="px-5 py-2 inline-flex border border-[#2d333b] hover:bg-[#161b22] text-white text-xs font-bold uppercase rounded-lg transition-colors disabled:opacity-50">
                            Save Changes
                         </button>
@@ -334,25 +382,45 @@ const Settings = () => {
                   )}
                </div>
 
-               {/* API Secrets */}
+               {/* API Key */}
                <div className="bg-[#11151c] border border-[#2d333b] rounded-xl p-8 shadow-sm">
-                  <div className="flex items-center space-x-3 mb-2">
-                     <h3 className="text-lg font-bold text-white">SDK API Key</h3>
+                  <div className="flex items-center space-x-2 mb-1">
+                     <KeyRound className="w-4 h-4 text-[#a5b4fc]" />
+                     <h3 className="text-lg font-bold text-white">SDK Ingestion Key</h3>
                   </div>
                   <p className="text-sm text-[#8b949e] mb-6 max-w-2xl">
-                     For security reasons, your plain-text API key is visible initially logic. If compromised, you must generate a new one using the Rotation tool below.
+                     Use this key in your SDK configuration. Only a preview is shown — the full key was visible once at creation. Rotate below if compromised.
                   </p>
-                  
-                  <div className="flex space-x-3 items-center">
-                     <div className="relative flex-1 max-w-lg">
-                        <input 
-                           type="text"
-                           readOnly
-                           value={renderApiKey()}
-                           className="w-full bg-[#0d1117] border border-[#2d333b] text-[#a5b4fc] font-mono text-xs rounded-lg px-4 py-3 cursor-not-allowed select-all"
-                        />
-                     </div>
-                  </div>
+
+                  {currentProject?.api_key_preview ? (
+                    <div className="flex items-center space-x-3 max-w-xl">
+                       <div className="flex items-center flex-1 bg-[#0d1117] border border-[#2d333b] rounded-lg pr-1">
+                          <input 
+                             type="text"
+                             readOnly
+                             value={apiKeyDisplay}
+                             className="flex-1 bg-transparent text-[#a5b4fc] font-mono text-xs px-4 py-3 cursor-not-allowed select-all outline-none"
+                          />
+                          <CopyButton text={currentProject.api_key_preview} label="API key preview" />
+                       </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-4 max-w-xl p-4 bg-[#451a03]/30 border border-[#78350f]/50 rounded-lg">
+                       <AlertTriangle className="w-5 h-5 text-[#f59e0b] shrink-0" />
+                       <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[#fdba74]">Key preview unavailable</p>
+                          <p className="text-xs text-[#8b949e] mt-0.5">This project was created before previews were stored. Rotate the key below to generate a new one.</p>
+                       </div>
+                       {canManageProject && (
+                         <button
+                           onClick={() => setActiveDangerModal('rotate')}
+                           className="px-4 py-2 shrink-0 bg-[#f59e0b]/10 border border-[#f59e0b]/40 text-[#fbbf24] text-xs font-bold rounded-lg hover:bg-[#f59e0b]/20 transition-colors"
+                         >
+                           Generate New Key
+                         </button>
+                       )}
+                    </div>
+                  )}
                </div>
 
                {/* Red Zone (RBAC Protected) */}
@@ -504,10 +572,10 @@ const Settings = () => {
       {/* Dynamic Danger Modals */}
       {activeDangerModal === 'rotate' && (
          <DangerActionModal 
-            title="Rotate Production Key"
-            description="Warning: Rotating the SDK API Key will instantly halt and reject ingestion for all currently deployed microservices utilizing the old index key! You must immediately deploy the new hash to your pods."
+            title="Rotate API Key"
+            description="Rotating the key will immediately invalidate the current one. All services using it will stop sending data until you update them with the new key."
             expectedText="ROTATE"
-            confirmLabel="Force Rotate"
+            confirmLabel="Rotate Key"
             onClose={() => setActiveDangerModal(null)}
             onConfirm={handleRotateKey}
          />
@@ -515,10 +583,10 @@ const Settings = () => {
 
       {activeDangerModal === 'delete' && (
          <DangerActionModal 
-            title={`Drop Sequence: ${currentProject?.name}`}
-            description={`Caution: [ ${currentProject?.name} ] and its entire historic telemetry traces, events, and metrics logs will be permanently erased. Undoing this drop sequence is algorithmically impossible.`}
+            title={`Delete Project: ${currentProject?.name}`}
+            description={`This will permanently delete "${currentProject?.name}" and all its logs, metrics, traces, and configuration. This action cannot be undone.`}
             expectedText={currentProject?.name}
-            confirmLabel="Destroy Traces"
+            confirmLabel="Delete Project"
             onClose={() => setActiveDangerModal(null)}
             onConfirm={handleDeleteProject}
          />

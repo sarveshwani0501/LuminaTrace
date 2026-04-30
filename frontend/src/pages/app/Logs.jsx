@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { 
   BarChart, Bar, ResponsiveContainer, Cell, Tooltip as RechartsTooltip, XAxis
@@ -10,6 +10,35 @@ import {
 import { io } from 'socket.io-client';
 import TraceWaterfallModal from '../../components/traces/TraceWaterfallModal';
 import { logsApi } from '../../api/logs';
+
+// ---- Pure helpers — defined at module scope to prevent recreation on each render ----
+const getLevelBadge = (level) => {
+  switch(level?.toUpperCase()) {
+    case 'ERROR': return 'text-[#fca5a5] bg-[#450a0a] border-[#7f1d1d]';
+    case 'WARN':  return 'text-[#fdba74] bg-[#451a03] border-[#78350f]';
+    case 'DEBUG': return 'text-[#67e8f9] bg-[#083344] border-[#164e63]';
+    default:      return 'text-[#8b949e] bg-[#1c212b] border-[#2d333b]';
+  }
+};
+
+const getLevelColor = (level) => {
+  switch(level?.toUpperCase()) {
+    case 'ERROR': return '#ef4444';
+    case 'WARN':  return '#f59e0b';
+    case 'DEBUG': return '#06b6d4';
+    default:      return '#8b949e';
+  }
+};
+
+const formatTime = (isoString) => {
+  if (!isoString) return '';
+  try {
+    const d = new Date(isoString);
+    return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}.${d.getMilliseconds().toString().padStart(3,'0')}`;
+  } catch(e) { return isoString; }
+};
+
+const TIME_LABELS = { '15m': '15 min', '1h': '1 hour', '6h': '6 hours', '24h': '24 hours', '7d': '7 days' };
 
 const ChartEmpty = ({ label }) => (
   <div className="w-full h-full flex flex-col items-center justify-center text-center px-4">
@@ -40,21 +69,28 @@ const Logs = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Helper: map volume intervals safely
-  const parseVolumeData = (data = []) =>
-    data.map(d => ({
-      time: new Date(d.time_bucket || d.time || d.bucket).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      count: parseInt(d.log_count || d.value || 0, 10),
-      isPeak: false // We can dynamically calculate peak if needed
-    })).reverse(); // Usually comes DESC from DB, chart needs ASC
+  const parseVolumeData = (data = [], range = '1h') => {
+    const showDate = ['6h', '24h', '7d'].includes(range);
+    return data.map(d => {
+      const dt = new Date(d.time_bucket || d.time || d.bucket);
+      const timeStr = showDate
+        ? dt.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' +
+          dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return {
+        time: timeStr,
+        count: parseInt(d.log_count || d.value || 0, 10),
+        isPeak: false,
+      };
+    }).reverse(); // Usually comes DESC from DB, chart needs ASC
+  };
 
   const fetchLogsData = useCallback(async () => {
     if (!projectId) return;
     setIsLoading(true);
     
     try {
-      // Pass the selected specific level if only one is chosen (backend strictly supports one string filter natively right now, we handle multi-select via client slice mostly unless extended)
       const primaryLevel = selectedLevels.length === 1 ? selectedLevels[0] : undefined;
-      console.log("Project ID: ", projectId);
       const [logsRes, volumeRes] = await Promise.allSettled([
          logsApi.getLogs(projectId, { timerange: timeRange, level: primaryLevel, limit: 150 }),
          logsApi.getVolume(projectId, timeRange)
@@ -72,7 +108,7 @@ const Logs = () => {
       
       if (volumeRes.status === 'fulfilled') {
         const v = volumeRes.value.data?.data || volumeRes.value.data || [];
-        const parsed = parseVolumeData(Array.isArray(v) ? v : []);
+        const parsed = parseVolumeData(Array.isArray(v) ? v : [], timeRange);
         
         // Mark highest volume count as Peak to highlight column
         const maxCount = Math.max(...parsed.map(p => p.count), 0);
@@ -119,52 +155,23 @@ const Logs = () => {
   }, [projectId, isLiveStream, selectedLevels]);
 
 
-  // Formatting Helpers
-  const getLevelBadge = (level) => {
-    switch(level?.toUpperCase()) {
-      case 'ERROR': return "text-[#fca5a5] bg-[#450a0a] border-[#7f1d1d]";
-      case 'WARN': return "text-[#fdba74] bg-[#451a03] border-[#78350f]";
-      case 'DEBUG': return "text-[#67e8f9] bg-[#083344] border-[#164e63]";
-      case 'INFO':
-      default: return "text-[#8b949e] bg-[#1c212b] border-[#2d333b]";
-    }
-  };
-
-  const getLevelColor = (level) => {
-    switch(level?.toUpperCase()) {
-      case 'ERROR': return "#ef4444";
-      case 'WARN': return "#f59e0b";
-      case 'DEBUG': return "#06b6d4";
-      case 'INFO':
-      default: return "#8b949e";
-    }
-  };
-
-  const formatTime = (isoString) => {
-    if (!isoString) return '';
-    try {
-      const date = new Date(isoString);
-      return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}.${date.getMilliseconds().toString().padStart(3, '0')}`;
-    } catch(e) { return isoString; }
-  };
-
   const toggleAccordion = (logId) => {
     setExpandedLogId(prev => prev === logId ? null : logId);
   };
 
-  // Perform client-side filter
-  const filteredLogs = logs.filter(l => {
+  // Memoised filter — only recomputes when logs, selectedLevels, or searchQuery change
+  const filteredLogs = useMemo(() => logs.filter(l => {
     if (selectedLevels.length > 0 && !selectedLevels.includes(l.level)) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      if (!l.message?.toLowerCase().includes(q) && 
+      if (!l.message?.toLowerCase().includes(q) &&
           !(l.trace_id && l.trace_id.toLowerCase().includes(q)) &&
           !(l.metadata && JSON.stringify(l.metadata).toLowerCase().includes(q))) {
         return false;
       }
     }
     return true;
-  });
+  }), [logs, selectedLevels, searchQuery]);
 
   return (
     <div className="w-full flex flex-col h-[calc(100vh-80px)] overflow-hidden space-y-4 px-2 pb-4">
@@ -176,7 +183,14 @@ const Logs = () => {
         <div className="flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-bold text-white tracking-tight mb-1">System Logs</h1>
-            <p className="text-xs font-mono text-[#8b949e]">Streaming event history & telemetry</p>
+            <p className="text-xs font-mono text-[#8b949e]">
+              Streaming event history & telemetry
+              {filteredLogs.length > 0 && (
+                <span className="ml-2 px-1.5 py-0.5 bg-[#1c212b] border border-[#2d333b] rounded text-[#a5b4fc] font-bold">
+                  {filteredLogs.length} {filteredLogs.length === 150 ? '(max)' : ''}
+                </span>
+              )}
+            </p>
           </div>
           
           <div className="flex items-center space-x-3 justify-end">
@@ -210,6 +224,14 @@ const Logs = () => {
                className={`px-3 py-1.5 border rounded text-xs font-mono flex items-center cursor-pointer transition-colors ${selectedLevels.includes('DEBUG') || selectedLevels.length === 0 ? 'bg-[#083344]/80 text-[#67e8f9] border-[#164e63]' : 'bg-[#11151c] text-[#8b949e] border-[#2d333b] hover:border-white/30'}`}>
                <div className="w-1.5 h-1.5 rounded-full bg-[#06b6d4] mr-2"></div>DEBUG
             </div>
+            {selectedLevels.length > 0 && (
+              <button
+                onClick={() => setSelectedLevels([])}
+                className="px-3 py-1.5 border border-[#2d333b] rounded text-xs font-mono text-[#8b949e] hover:text-white hover:border-white/30 transition-colors"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
 
@@ -228,23 +250,17 @@ const Logs = () => {
             />
           </div>
 
-          {/* Server Selector */}
-          <div className="flex items-center bg-[#11151c] border border-white/10 rounded-lg px-4 py-2 text-sm text-[#8b949e] cursor-pointer hover:border-[#a5b4fc] transition-colors">
-             <Server className="w-4 h-4 mr-2" />
-             <span>All Servers</span>
-             <ChevronDown className="w-4 h-4 ml-6" />
-          </div>
-
-          {/* Time Filter */}
-          <div className="relative z-[60]">
-            <div 
-              onClick={() => setIsTimeDropdownOpen(!isTimeDropdownOpen)}
-              className={`flex items-center bg-[#11151c] border cursor-pointer ${isTimeDropdownOpen ? 'border-[#818cf8]' : 'border-white/10'} hover:border-[#818cf8] transition-colors rounded-lg px-4 py-2 text-sm text-[#8b949e]`}
-            >
-              <Clock className="w-4 h-4 mr-2" />
-              <span>Last {timeRange}</span>
-              <ChevronDown className="w-4 h-4 ml-6" />
-            </div>
+          {/* Log Count + Time Filter */}
+          <div className="flex items-center space-x-2">
+            <div className="relative z-[60]">
+              <div 
+                onClick={() => setIsTimeDropdownOpen(!isTimeDropdownOpen)}
+                className={`flex items-center bg-[#11151c] border cursor-pointer ${isTimeDropdownOpen ? 'border-[#818cf8]' : 'border-white/10'} hover:border-[#818cf8] transition-colors rounded-lg px-4 py-2 text-sm text-[#8b949e]`}
+              >
+                <Clock className="w-4 h-4 mr-2" />
+                <span>Last {TIME_LABELS[timeRange] || timeRange}</span>
+                <ChevronDown className="w-4 h-4 ml-3" />
+              </div>
             
             {isTimeDropdownOpen && (
               <div className="absolute top-12 right-0 w-48 bg-[#161b22] border border-[#2d333b] rounded-lg shadow-xl z-50 overflow-hidden">
@@ -254,15 +270,16 @@ const Logs = () => {
                     onClick={() => { setTimeRange(t); setIsTimeDropdownOpen(false); }}
                     className={`px-4 py-3 text-sm cursor-pointer flex items-center justify-between ${timeRange === t ? 'text-white bg-[#1c212b]' : 'text-[#8b949e] hover:bg-[#1c212b] hover:text-white'}`}
                   >
-                    <span>Last {t}</span>
+                    <span>Last {TIME_LABELS[t] || t}</span>
                     {timeRange === t && <Check className="w-4 h-4 text-[#c084fc]" />}
                   </div>
                 ))}
               </div>
             )}
-          </div>
+            </div>{/* end relative z-60 */}
+          </div>{/* end flex space-x-2 */}
 
-        </div>
+        </div>{/* end Action Filters Bar */}
 
         {/* LOG VOLUME BAR CHART (100px strict height) */}
         <div className="bg-[#11151c] border border-white/5 rounded-xl p-3 h-[110px] flex flex-col relative w-full overflow-hidden">
@@ -281,7 +298,7 @@ const Logs = () => {
                         if (active && payload && payload.length) {
                           return (
                             <div className="bg-[#0d1117]/95 border border-white/10 p-2 rounded-lg shadow-2xl backdrop-blur-sm z-50">
-                              <p className="text-[10px] text-[#8b949e] mb-1 font-mono uppercase tracking-wider">{label} GMT</p>
+                              <p className="text-[10px] text-[#8b949e] mb-1 font-mono uppercase tracking-wider">{label}</p>
                               <p className="text-white text-xs font-mono"><span className="text-[#a5b4fc] font-bold">{payload[0].value}</span> Logs</p>
                             </div>
                           );
