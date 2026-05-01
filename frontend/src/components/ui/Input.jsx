@@ -120,17 +120,18 @@ const Input = forwardRef(({
           type={resolvedType}
           ref={ref}
           className={`
-            w-full rounded-md border bg-background
+            w-full rounded-md bg-background
             text-sm text-text-primary placeholder:text-text-muted
-            transition-all duration-fast
-            focus:outline-none focus:ring-2 focus:border-transparent
+            border ring-0 ring-offset-0
+            focus:outline-none focus:ring-2
+            transition-[border-color,box-shadow] duration-fast
             disabled:cursor-not-allowed disabled:opacity-50
             ${hasLeft  ? 'pl-9'  : 'pl-3'}
             ${hasRight ? 'pr-10' : 'pr-3'}
             py-2
             ${error
-              ? 'border-accent-error focus:ring-accent-error/30'
-              : 'border-border focus:ring-primary/25 focus:ring-offset-0 hover:border-border-light'
+              ? 'border-accent-error focus:border-accent-error focus:ring-accent-error/20'
+              : 'border-border hover:border-border-light focus:border-primary focus:ring-primary/20'
             }
             ${className}
           `}

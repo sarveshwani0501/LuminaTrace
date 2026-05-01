@@ -9,6 +9,10 @@ import OTPVerificationPage from './pages/auth/OTPVerificationPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import InvitePage from './pages/auth/InvitePage';
+import DocsPage from './pages/public/Docs';
+import Pricing from './pages/public/Pricing';
+import Integrations from './pages/public/Integrations';
+import Legal from './pages/public/Legal';
 import Dashboard from './pages/app/Dashboard';
 import Metrics from './pages/app/Metrics';
 import Logs from './pages/app/Logs';
@@ -23,6 +27,11 @@ function App() {
         {/* Public Routes with Navbar and Footer */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/docs" element={<DocsPage />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/integrations" element={<Integrations />} />
+          <Route path="/privacy" element={<Legal type="privacy" />} />
+          <Route path="/terms" element={<Legal type="terms" />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/verify-otp" element={<OTPVerificationPage />} />

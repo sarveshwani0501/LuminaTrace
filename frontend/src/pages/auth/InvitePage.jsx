@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { UserPlus, Building2, CheckCircle2 } from 'lucide-react';
+import { UserPlus, Building2, CheckCircle2, Lock, User, AlertCircle, ShieldCheck, Loader2 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { setUser } from '../../store/slices/authSlice';
 import Button from '../../components/ui/Button';
@@ -8,37 +8,59 @@ import Input from '../../components/ui/Input';
 import { Card, CardContent } from '../../components/ui/Card';
 import { invitesApi } from '../../api/invites';
 
+/* ── Loading skeleton ───────────────────────────────────────────── */
+const LoadingView = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-10 h-10 rounded-full border-2 border-border border-t-secondary animate-spin" />
+      <span className="text-sm text-text-muted font-mono">Validating invite…</span>
+    </div>
+  </div>
+);
+
+/* ── Invalid invite fallback ────────────────────────────────────── */
+const InvalidInviteView = ({ message }) => (
+  <div className="min-h-screen flex flex-col items-center justify-center py-16 px-4 bg-background">
+    <div className="w-full max-w-md">
+      <Card>
+        <CardContent className="pt-8 pb-6 px-7 flex flex-col items-center gap-5 text-center">
+          <div className="w-14 h-14 rounded-full bg-accent-error/10 border border-accent-error/25 flex items-center justify-center">
+            <Building2 className="w-7 h-7 text-accent-error" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-text-primary mb-2">Invalid invite</h1>
+            <p className="text-sm text-text-muted max-w-xs mx-auto">{message}</p>
+          </div>
+          <Link to="/" className="w-full">
+            <Button variant="secondary" size="md" className="w-full">Go to homepage</Button>
+          </Link>
+        </CardContent>
+      </Card>
+    </div>
+  </div>
+);
+
+/* ── Page ───────────────────────────────────────────────────────── */
 const InvitePage = () => {
-  const { token } = useParams();
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const { token }  = useParams();
+  const navigate   = useNavigate();
+  const dispatch   = useDispatch();
 
-  // Initialization states
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading]   = useState(true);
   const [inviteData, setInviteData] = useState(null);
-  const [pageError, setPageError] = useState(null);
+  const [pageError, setPageError]   = useState(null);
 
-  // Form states
-  const [formData, setFormData] = useState({ full_name: '', password: '' });
+  const [formData, setFormData]     = useState({ full_name: '', password: '' });
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [isSuccess, setIsSuccess]   = useState(false);
 
   useEffect(() => {
-    const fetchInviteData = async () => {
-      try {
-        const response = await invitesApi.getInviteInfo(token);
-        setInviteData(response.data);
-      } catch (err) {
-        setPageError('This invite link is invalid, expired, or has already been used.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (token) {
-      fetchInviteData();
-    }
+    if (!token) return;
+    invitesApi.getInviteInfo(token)
+      .then(r => setInviteData(r.data))
+      .catch(() => setPageError('This invite link is invalid, expired, or has already been used.'))
+      .finally(() => setIsLoading(false));
   }, [token]);
 
   const handleChange = (e) => {
@@ -48,186 +70,199 @@ const InvitePage = () => {
   };
 
   const validate = () => {
-    const errors = {};
-    if (!inviteData.existingUser && !formData.full_name.trim()) {
-      errors.full_name = "Full name is required";
-    }
-    if (!formData.password) {
-      errors.password = "Password is required";
-    } else if (!inviteData.existingUser && formData.password.length < 8) {
-      errors.password = "Must be at least 8 characters";
-    }
-    
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+    const e = {};
+    if (!inviteData.existingUser && !formData.full_name.trim()) e.full_name = 'Full name is required';
+    if (!formData.password)                                      e.password = 'Password is required';
+    else if (!inviteData.existingUser && formData.password.length < 8) e.password = 'Must be at least 8 characters';
+    setFormErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-
     setIsSubmitting(true);
     setFormErrors({});
-
     try {
       let authResponse;
-      
       if (inviteData.existingUser) {
-        authResponse = await invitesApi.acceptAsExistingUser(token, { 
-           email: inviteData.email, 
-           password: formData.password 
+        authResponse = await invitesApi.acceptAsExistingUser(token, {
+          email: inviteData.email,
+          password: formData.password,
         });
       } else {
-        authResponse = await invitesApi.acceptAsNewUser(token, { 
-           full_name: formData.full_name, 
-           password: formData.password 
+        authResponse = await invitesApi.acceptAsNewUser(token, {
+          full_name: formData.full_name,
+          password: formData.password,
         });
       }
-
-      // Automatically authenticate the user natively using the fastify cookie injection payload
-      if (authResponse.data && authResponse.data.user) {
-         dispatch(setUser(authResponse.data.user));
-         // By triggering a hard reload locally, Redux bootstrapper will execute `/auth/verify` natively grabbing the new org list!
-      }
-
+      if (authResponse.data?.user) dispatch(setUser(authResponse.data.user));
       setIsSuccess(true);
-      
-      setTimeout(() => {
-         window.location.href = '/app/dashboard'; 
-      }, 1500);
-
+      setTimeout(() => { window.location.href = '/app/dashboard'; }, 1500);
     } catch (err) {
-      setFormErrors({ global: err.response?.data?.message || err.response?.data?.error || 'Invalid credentials or failed to accept invite.' });
+      setFormErrors({
+        global: err.response?.data?.message || err.response?.data?.error || 'Invalid credentials or failed to accept invite.',
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen px-4">
-        <div className="w-12 h-12 rounded-full border-4 border-surface-active border-t-primary animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (pageError) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-        <h1 className="text-2xl font-bold text-text-primary mb-4">Invalid Invite</h1>
-        <p className="text-text-secondary mb-6 max-w-md">{pageError}</p>
-        <Link to="/">
-          <Button variant="secondary">Go to Homepage</Button>
-        </Link>
-      </div>
-    );
-  }
+  if (isLoading)  return <LoadingView />;
+  if (pageError)  return <InvalidInviteView message={pageError} />;
 
   return (
-    <div className="flex flex-col items-center justify-center py-20 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center py-16 px-4 bg-background">
       <div className="w-full max-w-md relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-secondary/20 blur-[100px] rounded-full pointer-events-none"></div>
-        
-        <Card className="relative z-10 w-full p-2">
-          <CardContent className="flex flex-col space-y-6 pt-6">
+
+        {/* Ambient glow — cyan for invites */}
+        <div className="absolute inset-0 -z-0 flex items-center justify-center pointer-events-none">
+          <div className="w-72 h-72 bg-secondary/8 rounded-full blur-[80px]" />
+        </div>
+
+        <Card className="relative z-10">
+          <CardContent className="pt-8 pb-6 px-7 flex flex-col gap-6">
+
             {!isSuccess ? (
               <>
-                <div className="text-center space-y-3">
-                  <div className="inline-flex justify-center items-center w-14 h-14 rounded-2xl bg-surface-active mb-2 border border-border-light shadow-glass">
-                    <Building2 className="w-7 h-7 text-secondary" />
+                {/* Header */}
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <div className="w-11 h-11 rounded-xl bg-secondary/10 border border-secondary/25 flex items-center justify-center mb-1">
+                    <Building2 className="w-5 h-5 text-secondary" />
                   </div>
-                  <h1 className="text-2xl font-bold tracking-tight text-text-primary">Join {inviteData.organization_name}</h1>
-                  <p className="text-sm text-text-secondary max-w-xs mx-auto">
-                    You have been invited to collaborate as a <span className="font-semibold text-secondary capitalize">{inviteData.role}</span>.
+                  <h1 className="text-xl font-semibold tracking-tight text-text-primary">
+                    Join {inviteData.organization_name}
+                  </h1>
+                  <p className="text-sm text-text-muted">
+                    You've been invited to collaborate as a{' '}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-badge bg-secondary/10 text-secondary border border-secondary/20 text-xs font-mono capitalize">
+                      {inviteData.role}
+                    </span>
                   </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+
                   {formErrors.global && (
-                    <div className="p-3 bg-accent-error/10 border border-accent-error/50 rounded text-sm text-accent-error text-center">
+                    <div className="flex items-center gap-2 p-3 rounded-md bg-accent-error/10 border border-accent-error/30 text-accent-error text-sm">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
                       {formErrors.global}
                     </div>
                   )}
 
-                  {/* The email is strictly locked to what the invite was generated for */}
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-text-secondary">Invited Email</label>
-                    <Input 
-                      value={inviteData.email}
-                      disabled
-                      className="bg-surface opacity-70 cursor-not-allowed"
-                    />
-                  </div>
+                  {/* Locked email */}
+                  <Input
+                    label="Invited email"
+                    value={inviteData.email}
+                    disabled
+                    hint="This email is locked to the invite."
+                  />
 
                   {inviteData.existingUser ? (
-                    // ─── EXISTING USER SCENARIO ───
-                    <div className="space-y-1 mt-4">
-                      <div className="flex items-center space-x-2 mb-3 bg-secondary/10 p-3 rounded-lg border border-secondary/20">
-                        <CheckCircle2 className="w-5 h-5 text-secondary flex-shrink-0" />
-                        <p className="text-xs text-text-primary">
-                          We found an existing account for this email. Validate your password to join this new organization.
+                    /* ── Existing user ── */
+                    <>
+                      <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/6 border border-secondary/20">
+                        <CheckCircle2 className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
+                        <p className="text-xs text-text-secondary leading-relaxed">
+                          We found an existing account for this email.
+                          Confirm your password to join <span className="text-text-primary font-medium">{inviteData.organization_name}</span>.
                         </p>
                       </div>
-                      <label className="text-sm font-medium text-text-primary">Verify Password</label>
-                      <Input 
+                      <Input
+                        label="Verify your password"
                         name="password"
                         type="password"
-                        placeholder="••••••••" 
+                        placeholder="••••••••"
+                        icon={Lock}
                         value={formData.password}
                         onChange={handleChange}
                         error={formErrors.password}
+                        autoComplete="current-password"
                       />
-                    </div>
+                    </>
                   ) : (
-                    // ─── NEW USER SCENARIO ───
+                    /* ── New user ── */
                     <>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium text-text-primary">Full Name</label>
-                        <Input 
-                          name="full_name"
-                          placeholder="John Doe" 
-                          value={formData.full_name}
-                          onChange={handleChange}
-                          error={formErrors.full_name}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium text-text-primary">Create Password</label>
-                        <Input 
-                          name="password"
-                          type="password"
-                          placeholder="••••••••" 
-                          value={formData.password}
-                          onChange={handleChange}
-                          error={formErrors.password}
-                        />
-                      </div>
+                      <Input
+                        label="Full name"
+                        name="full_name"
+                        placeholder="Jane Doe"
+                        icon={User}
+                        value={formData.full_name}
+                        onChange={handleChange}
+                        error={formErrors.full_name}
+                        autoComplete="name"
+                      />
+                      <Input
+                        label="Create a password"
+                        name="password"
+                        type="password"
+                        placeholder="At least 8 characters"
+                        icon={Lock}
+                        value={formData.password}
+                        onChange={handleChange}
+                        error={formErrors.password}
+                        hint="Min. 8 characters"
+                        autoComplete="new-password"
+                      />
                     </>
                   )}
 
-                  <Button type="submit" className="w-full mt-4 shadow-glow-primary" disabled={isSubmitting}>
-                    {isSubmitting ? 'Joining...' : inviteData.existingUser ? 'Accept Invite' : 'Create Account & Join'}
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    size="md"
+                    className="w-full mt-1 !text-secondary !border-secondary/40 hover:!bg-secondary/10 hover:!border-secondary"
+                    loading={isSubmitting}
+                  >
+                    {isSubmitting
+                      ? 'Joining…'
+                      : inviteData.existingUser ? 'Accept invite' : 'Create account & join'
+                    }
                   </Button>
                 </form>
-                
-                <p className="text-xs text-center text-text-muted mt-4">
-                  By accepting, you agree to LuminaTrace's Terms of Service and Privacy Policy.
+
+                <p className="text-[11px] text-center text-text-muted">
+                  By accepting, you agree to LuminaTrace's{' '}
+                  <span className="text-text-secondary underline underline-offset-2 cursor-pointer">Terms of Service</span>
+                  {' '}and{' '}
+                  <span className="text-text-secondary underline underline-offset-2 cursor-pointer">Privacy Policy</span>.
                 </p>
               </>
             ) : (
-              // ─── SUCCESS STATE ───
-              <div className="text-center space-y-6 py-8">
-                <div className="inline-flex justify-center items-center w-16 h-16 rounded-full bg-accent-success/10 border border-accent-success/30 shadow-[0_0_20px_rgba(39,201,63,0.2)] mb-2 animate-bounce">
-                  <UserPlus className="w-8 h-8 text-accent-success" />
+              /* ── Success state ─────────────────────────────── */
+              <div className="flex flex-col items-center gap-5 text-center py-4">
+                <div className="w-14 h-14 rounded-full bg-accent-success/10 border border-accent-success/25 flex items-center justify-center">
+                  {/* Steady icon — no bounce */}
+                  <UserPlus className="w-7 h-7 text-accent-success" />
                 </div>
-                <h1 className="text-2xl font-bold tracking-tight text-text-primary">Welcome to the team!</h1>
-                <p className="text-sm text-text-secondary">
-                  You have successfully joined <span className="font-semibold text-white">{inviteData.organization_name}</span>. Redirecting you to the dashboard...
-                </p>
+                <div>
+                  <h1 className="text-xl font-semibold text-text-primary mb-2">Welcome to the team!</h1>
+                  <p className="text-sm text-text-muted max-w-xs mx-auto">
+                    You've joined{' '}
+                    <span className="font-medium text-text-primary">{inviteData.organization_name}</span>.
+                    Redirecting you to your dashboard…
+                  </p>
+                </div>
+                {/* Redirect indicator */}
+                <div className="flex items-center gap-2 text-xs text-text-muted font-mono">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Taking you to the dashboard
+                </div>
               </div>
             )}
+
           </CardContent>
+
+          {/* Trust strip */}
+          <div className="px-7 py-3 border-t border-border bg-background/40 flex items-center justify-center gap-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-accent-success shrink-0" />
+            <span className="text-[11px] text-text-muted">
+              End-to-end encrypted · SOC 2 ready · No tracking
+            </span>
+          </div>
         </Card>
+
       </div>
     </div>
   );

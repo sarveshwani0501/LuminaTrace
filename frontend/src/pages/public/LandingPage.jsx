@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, Terminal, Shield, Zap, ArrowRight, BarChart2 } from 'lucide-react';
+import { Activity, Terminal, Shield, Zap, ArrowRight, BarChart2, Check } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { Card, CardContent } from '../../components/ui/Card';
 
@@ -34,11 +34,11 @@ const LandingPage = () => {
               Start Free Trial <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </Link>
-          <a href="#docs">
+          <Link to="/docs">
             <Button variant="secondary" size="lg" className="w-full sm:w-auto group">
               <Terminal className="w-4 h-4 mr-2 group-hover:text-primary transition-colors" /> Read the SDK Docs
             </Button>
-          </a>
+          </Link>
         </div>
       </section>
 
@@ -133,6 +133,7 @@ const LandingPage = () => {
           </div>
         </div>
       </section>
+      {/* End of Landing Page */}
     </div>
   );
 };

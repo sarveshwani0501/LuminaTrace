@@ -1,71 +1,300 @@
+// import React, { useState } from 'react';
+// import { Link, useNavigate } from 'react-router-dom';
+// import { useDispatch } from 'react-redux';
+// import { signupUser } from '../../store/slices/authSlice';
+// import { Target } from 'lucide-react';
+// import Button from '../../components/ui/Button';
+// import Input from '../../components/ui/Input';
+// import { Card, CardContent } from '../../components/ui/Card';
+
+// const SignupPage = () => {
+//   const navigate = useNavigate();
+//   const dispatch = useDispatch();
+//   const [data, setData] = useState({ 
+//     full_name: '', 
+//     email: '', 
+//     password: '', 
+//     confirm_password: '',
+//     organization_name: '' 
+//   });
+//   const [errors, setErrors] = useState({});
+//   const [isLoading, setIsLoading] = useState(false);
+
+//   const handleChange = (e) => {
+//     const { name, value } = e.target;
+//     setData((prev) => ({ ...prev, [name]: value }));
+//     if (errors[name]) {
+//       setErrors((prev) => ({ ...prev, [name]: null }));
+//     }
+//   };
+
+//   const validate = () => {
+//     const newErrors = {};
+//     if (!data.full_name) newErrors.full_name = 'Full name is required';
+//     else if (data.full_name.length < 2) newErrors.full_name = 'Name must be at least 2 characters';
+    
+//     if (!data.email) newErrors.email = 'Email is required';
+//     else if (!/\S+@\S+\.\S+/.test(data.email)) newErrors.email = 'Invalid email format';
+    
+//     if (!data.password) newErrors.password = 'Password is required';
+//     else if (data.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+
+//     if (!data.confirm_password) newErrors.confirm_password = 'Confirm your password';
+//     else if (data.password !== data.confirm_password) newErrors.confirm_password = 'Passwords do not match';
+
+//     if (!data.organization_name) newErrors.organization_name = 'Organization name is required';
+//     else if (data.organization_name.length < 2) newErrors.organization_name = 'Must be at least 2 characters';
+    
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     if (!validate()) return;
+
+//     setIsLoading(true);
+    
+//     try {
+//       const submitData = {
+//         full_name: data.full_name,
+//         email: data.email,
+//         password: data.password,
+//         organization_name: data.organization_name
+//       };
+
+//       await dispatch(signupUser(submitData)).unwrap();
+      
+//       // On success, redirect to OTP view and pass email via state
+//       navigate('/verify-otp', { state: { email: data.email } });
+//     } catch (err) {
+//       setErrors({ global: err || 'Failed to create account. Email may already be in use.' });
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   return (
+//     <div className="flex flex-col items-center justify-center py-10 px-4">
+//       <div className="w-full max-w-lg relative">
+//         {/* Background ambient glow matching theme */}
+//         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-secondary/20 blur-[100px] rounded-full pointer-events-none"></div>
+        
+//         <Card className="relative z-10 w-full p-2">
+//           <CardContent className="flex flex-col space-y-6 pt-6">
+//             <div className="text-center space-y-2">
+//                <div className="inline-flex justify-center items-center w-12 h-12 rounded-xl bg-surface-active mb-2 border border-border-light shadow-glass">
+//                 <Target className="w-6 h-6 text-secondary" />
+//               </div>
+//               <h1 className="text-2xl font-bold tracking-tight text-text-primary">Create an account</h1>
+//               <p className="text-sm text-text-secondary">Start monitoring your distributed systems.</p>
+//             </div>
+
+//             <form onSubmit={handleSubmit} className="space-y-4">
+//               {errors.global && (
+//                 <div className="p-3 bg-accent-error/10 border border-accent-error/50 rounded text-sm text-accent-error text-center">
+//                   {errors.global}
+//                 </div>
+//               )}
+              
+//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                 <div className="space-y-1">
+//                   <label className="text-sm font-medium text-text-primary">Full Name</label>
+//                   <Input 
+//                     name="full_name"
+//                     placeholder="Jane Doe" 
+//                     value={data.full_name}
+//                     onChange={handleChange}
+//                     error={errors.full_name}
+//                   />
+//                 </div>
+                
+//                 <div className="space-y-1">
+//                   <label className="text-sm font-medium text-text-primary">Work Email</label>
+//                   <Input 
+//                     name="email"
+//                     type="email" 
+//                     placeholder="jane@company.com" 
+//                     value={data.email}
+//                     onChange={handleChange}
+//                     error={errors.email}
+//                   />
+//                 </div>
+//               </div>
+
+//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                 <div className="space-y-1">
+//                   <label className="text-sm font-medium text-text-primary">Password</label>
+//                   <Input 
+//                     name="password"
+//                     type="password" 
+//                     placeholder="At least 8 chars" 
+//                     value={data.password}
+//                     onChange={handleChange}
+//                     error={errors.password}
+//                   />
+//                 </div>
+
+//                 <div className="space-y-1">
+//                   <label className="text-sm font-medium text-text-primary">Confirm Password</label>
+//                   <Input 
+//                     name="confirm_password"
+//                     type="password" 
+//                     placeholder="Repeat password" 
+//                     value={data.confirm_password}
+//                     onChange={handleChange}
+//                     error={errors.confirm_password}
+//                   />
+//                 </div>
+//               </div>
+
+//               <div className="space-y-1 pt-2">
+//                  <label className="text-sm font-medium text-text-primary">Organization Name <span className="text-accent-error">*</span></label>
+//                  <Input 
+//                    name="organization_name"
+//                    placeholder="My Awesome Startup" 
+//                    value={data.organization_name}
+//                    onChange={handleChange}
+//                    error={errors.organization_name}
+//                  />
+//                  <p className="text-xs text-text-muted mt-1">You will be designated as the owner of this organization.</p>
+//               </div>
+
+//               <Button type="submit" className="w-full mt-4" disabled={isLoading}>
+//                 {isLoading ? 'Creating account...' : 'Create Account'}
+//               </Button>
+//             </form>
+
+//             <div className="text-center text-sm text-text-secondary">
+//               Already have an account?{' '}
+//               <Link to="/login" className="text-secondary hover:text-white font-medium">Log in</Link>
+//             </div>
+//           </CardContent>
+//         </Card>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default SignupPage;
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { signupUser } from '../../store/slices/authSlice';
-import { Target } from 'lucide-react';
+import { User, Mail, Lock, Building2, AlertCircle, ShieldCheck } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { Card, CardContent } from '../../components/ui/Card';
 
+/* ── Feature pills shown above the form ────────────────────────── */
+const FEATURES = [
+  { label: 'Real-time logs',       color: 'bg-accent-success'  },
+  { label: 'Distributed tracing',  color: 'bg-primary'         },
+  { label: 'Smart alerts',         color: 'bg-accent-warning'  },
+  { label: 'Uptime monitoring',    color: 'bg-secondary'       },
+];
+
+/* ── Password strength meter ────────────────────────────────────── */
+const getStrength = (pw) => {
+  if (!pw) return 0;
+  let s = 0;
+  if (pw.length >= 8)              s++;
+  if (/[A-Z]/.test(pw))           s++;
+  if (/[0-9]/.test(pw))           s++;
+  if (/[^A-Za-z0-9]/.test(pw))   s++;
+  return s;
+};
+
+const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+const STRENGTH_COLORS = [
+  '',
+  'bg-accent-error',
+  'bg-accent-warning',
+  'bg-secondary',
+  'bg-accent-success',
+];
+
+const PasswordStrength = ({ password }) => {
+  const strength = getStrength(password);
+  if (!password) return null;
+  return (
+    <div className="mt-1.5 flex flex-col gap-1">
+      <div className="flex gap-1">
+        {[1, 2, 3, 4].map(i => (
+          <div
+            key={i}
+            className={`h-0.5 flex-1 rounded-full transition-all duration-base ${
+              i <= strength ? STRENGTH_COLORS[strength] : 'bg-border-light'
+            }`}
+          />
+        ))}
+      </div>
+      <span className={`text-[10px] font-mono ${
+        strength <= 1 ? 'text-accent-error'
+        : strength === 2 ? 'text-accent-warning'
+        : strength === 3 ? 'text-secondary'
+        : 'text-accent-success'
+      }`}>
+        {STRENGTH_LABELS[strength]}
+      </span>
+    </div>
+  );
+};
+
+/* ── Page ───────────────────────────────────────────────────────── */
 const SignupPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [data, setData] = useState({ 
-    full_name: '', 
-    email: '', 
-    password: '', 
+  const [data, setData] = useState({
+    full_name: '',
+    email: '',
+    password: '',
     confirm_password: '',
-    organization_name: '' 
+    organization_name: '',
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors]       = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: null }));
-    }
+    setData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
   };
 
   const validate = () => {
-    const newErrors = {};
-    if (!data.full_name) newErrors.full_name = 'Full name is required';
-    else if (data.full_name.length < 2) newErrors.full_name = 'Name must be at least 2 characters';
-    
-    if (!data.email) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(data.email)) newErrors.email = 'Invalid email format';
-    
-    if (!data.password) newErrors.password = 'Password is required';
-    else if (data.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+    const e = {};
+    if (!data.full_name)                        e.full_name = 'Full name is required';
+    else if (data.full_name.length < 2)         e.full_name = 'Must be at least 2 characters';
 
-    if (!data.confirm_password) newErrors.confirm_password = 'Confirm your password';
-    else if (data.password !== data.confirm_password) newErrors.confirm_password = 'Passwords do not match';
+    if (!data.email)                            e.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(data.email)) e.email = 'Invalid email format';
 
-    if (!data.organization_name) newErrors.organization_name = 'Organization name is required';
-    else if (data.organization_name.length < 2) newErrors.organization_name = 'Must be at least 2 characters';
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (!data.password)                         e.password = 'Password is required';
+    else if (data.password.length < 8)          e.password = 'Must be at least 8 characters';
+
+    if (!data.confirm_password)                 e.confirm_password = 'Confirm your password';
+    else if (data.password !== data.confirm_password) e.confirm_password = 'Passwords do not match';
+
+    if (!data.organization_name)                e.organization_name = 'Organization name is required';
+    else if (data.organization_name.length < 2) e.organization_name = 'Must be at least 2 characters';
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-
     setIsLoading(true);
-    
     try {
       const submitData = {
         full_name: data.full_name,
         email: data.email,
         password: data.password,
-        organization_name: data.organization_name
+        organization_name: data.organization_name,
       };
-
       await dispatch(signupUser(submitData)).unwrap();
-      
-      // On success, redirect to OTP view and pass email via state
       navigate('/verify-otp', { state: { email: data.email } });
     } catch (err) {
       setErrors({ global: err || 'Failed to create account. Email may already be in use.' });
@@ -75,102 +304,160 @@ const SignupPage = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center py-10 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center py-10 px-4 bg-background">
       <div className="w-full max-w-lg relative">
-        {/* Background ambient glow matching theme */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-secondary/20 blur-[100px] rounded-full pointer-events-none"></div>
-        
-        <Card className="relative z-10 w-full p-2">
-          <CardContent className="flex flex-col space-y-6 pt-6">
-            <div className="text-center space-y-2">
-               <div className="inline-flex justify-center items-center w-12 h-12 rounded-xl bg-surface-active mb-2 border border-border-light shadow-glass">
-                <Target className="w-6 h-6 text-secondary" />
+
+        {/* Ambient glow — cyan for signup to visually distinguish from login */}
+        <div className="absolute inset-0 -z-0 flex items-center justify-center pointer-events-none">
+          <div className="w-80 h-80 bg-secondary/10 rounded-full blur-[90px]" />
+        </div>
+
+        <Card className="relative z-10">
+          <CardContent className="pt-8 pb-6 px-7 flex flex-col gap-5">
+
+            {/* Header */}
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="w-11 h-11 rounded-xl bg-secondary/10 border border-secondary/25 flex items-center justify-center mb-1">
+                <svg viewBox="0 0 22 22" fill="none" className="w-5 h-5">
+                  <circle cx="11" cy="11" r="8" stroke="#00E5FF" strokeWidth="1.8" />
+                  <path d="M11 7v4l3 2" stroke="#00E5FF" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-text-primary">Create an account</h1>
-              <p className="text-sm text-text-secondary">Start monitoring your distributed systems.</p>
+              <h1 className="text-xl font-semibold tracking-tight text-text-primary">
+                Create your workspace
+              </h1>
+              <p className="text-sm text-text-muted">
+                Start monitoring your distributed systems in minutes
+              </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Feature pills */}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {FEATURES.map(f => (
+                <span
+                  key={f.label}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-pill bg-surface border border-border text-[11px] text-text-muted font-mono"
+                >
+                  <span className={`w-1.5 h-1.5 rounded-pill shrink-0 ${f.color}`} />
+                  {f.label}
+                </span>
+              ))}
+            </div>
+
+            <div className="h-px bg-border" />
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+
+              {/* Global error */}
               {errors.global && (
-                <div className="p-3 bg-accent-error/10 border border-accent-error/50 rounded text-sm text-accent-error text-center">
+                <div className="flex items-center gap-2 p-3 rounded-md bg-accent-error/10 border border-accent-error/30 text-accent-error text-sm">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
                   {errors.global}
                 </div>
               )}
-              
+
+              {/* Row 1: name + email */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-text-primary">Full Name</label>
-                  <Input 
-                    name="full_name"
-                    placeholder="Jane Doe" 
-                    value={data.full_name}
-                    onChange={handleChange}
-                    error={errors.full_name}
-                  />
-                </div>
-                
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-text-primary">Work Email</label>
-                  <Input 
-                    name="email"
-                    type="email" 
-                    placeholder="jane@company.com" 
-                    value={data.email}
-                    onChange={handleChange}
-                    error={errors.email}
-                  />
-                </div>
+                <Input
+                  label="Full name"
+                  name="full_name"
+                  placeholder="Jane Doe"
+                  icon={User}
+                  value={data.full_name}
+                  onChange={handleChange}
+                  error={errors.full_name}
+                  autoComplete="name"
+                />
+                <Input
+                  label="Work email"
+                  name="email"
+                  type="email"
+                  placeholder="jane@company.com"
+                  icon={Mail}
+                  value={data.email}
+                  onChange={handleChange}
+                  error={errors.email}
+                  autoComplete="email"
+                />
               </div>
 
+              {/* Row 2: passwords + strength meters */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-text-primary">Password</label>
-                  <Input 
+                <div>
+                  <Input
+                    label="Password"
                     name="password"
-                    type="password" 
-                    placeholder="At least 8 chars" 
+                    type="password"
+                    placeholder="At least 8 chars"
+                    icon={Lock}
                     value={data.password}
                     onChange={handleChange}
                     error={errors.password}
+                    autoComplete="new-password"
                   />
+                  <PasswordStrength password={data.password} />
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-text-primary">Confirm Password</label>
-                  <Input 
+                <div>
+                  <Input
+                    label="Confirm password"
                     name="confirm_password"
-                    type="password" 
-                    placeholder="Repeat password" 
+                    type="password"
+                    placeholder="Repeat password"
+                    icon={Lock}
                     value={data.confirm_password}
                     onChange={handleChange}
                     error={errors.confirm_password}
+                    autoComplete="new-password"
                   />
+                  <PasswordStrength password={data.confirm_password} />
                 </div>
               </div>
 
-              <div className="space-y-1 pt-2">
-                 <label className="text-sm font-medium text-text-primary">Organization Name <span className="text-accent-error">*</span></label>
-                 <Input 
-                   name="organization_name"
-                   placeholder="My Awesome Startup" 
-                   value={data.organization_name}
-                   onChange={handleChange}
-                   error={errors.organization_name}
-                 />
-                 <p className="text-xs text-text-muted mt-1">You will be designated as the owner of this organization.</p>
-              </div>
+              {/* Organization */}
+              <Input
+                label="Organization name"
+                name="organization_name"
+                placeholder="My Awesome Startup"
+                icon={Building2}
+                value={data.organization_name}
+                onChange={handleChange}
+                error={errors.organization_name}
+                hint="You'll be designated as owner of this organization."
+              />
 
-              <Button type="submit" className="w-full mt-4" disabled={isLoading}>
-                {isLoading ? 'Creating account...' : 'Create Account'}
+              <Button
+                type="submit"
+                variant="outline"
+                size="md"
+                className="w-full mt-1 !text-secondary !border-secondary/40 hover:!bg-secondary/10 hover:!border-secondary"
+                loading={isLoading}
+              >
+                {isLoading ? 'Creating workspace…' : 'Create workspace →'}
               </Button>
             </form>
 
-            <div className="text-center text-sm text-text-secondary">
+            {/* Login link */}
+            <p className="text-center text-sm text-text-secondary">
               Already have an account?{' '}
-              <Link to="/login" className="text-secondary hover:text-white font-medium">Log in</Link>
-            </div>
+              <Link
+                to="/login"
+                className="text-secondary hover:text-white font-medium transition-colors duration-fast"
+              >
+                Sign in
+              </Link>
+            </p>
           </CardContent>
+
+          {/* Trust footer strip */}
+          <div className="px-7 py-3 border-t border-border bg-background/40 flex items-center justify-center gap-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-accent-success shrink-0" />
+            <span className="text-[11px] text-text-muted">
+              End-to-end encrypted · SOC 2 ready · No tracking
+            </span>
+          </div>
         </Card>
+
       </div>
     </div>
   );

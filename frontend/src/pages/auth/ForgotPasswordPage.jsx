@@ -1,42 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, ArrowLeft, Timer } from 'lucide-react';
+import { Mail, ArrowLeft, Timer, AlertCircle, ShieldCheck, RefreshCw } from 'lucide-react';
 import { authApi } from '../../api/auth';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { Card, CardContent } from '../../components/ui/Card';
 
 const ForgotPasswordPage = () => {
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState(null);
+  const [email, setEmail]       = useState('');
+  const [error, setError]       = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSent, setIsSent] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(900); // 15 minutes = 900 seconds
+  const [isSent, setIsSent]     = useState(false);
+  const [timeLeft, setTimeLeft] = useState(900);
 
   useEffect(() => {
-    let timer;
-    if (isSent && timeLeft > 0) {
-      timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    } else if (timeLeft <= 0) {
-      clearInterval(timer);
-    }
+    if (!isSent) return;
+    if (timeLeft <= 0) return;
+    const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
     return () => clearInterval(timer);
   }, [isSent, timeLeft]);
 
+  const formatTime = (s) => {
+    const m = Math.floor(s / 60);
+    return `${m}:${(s % 60).toString().padStart(2, '0')}`;
+  };
+
+  const validate = () => {
+    if (!email)                           { setError('Email is required'); return false; }
+    if (!/\S+@\S+\.\S+/.test(email))     { setError('Enter a valid email address'); return false; }
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !/\S+@\S+\.\S+/.test(email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
+    if (!validate()) return;
     setIsLoading(true);
     setError(null);
-
     try {
       await authApi.requestPasswordReset({ email });
       setIsSent(true);
-      setTimeLeft(900); // reset timer if they submit again
+      setTimeLeft(900);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send reset email. Please try again.');
     } finally {
@@ -44,93 +47,134 @@ const ForgotPasswordPage = () => {
     }
   };
 
-  const formatTime = (seconds) => {
-    const min = Math.floor(seconds / 60);
-    const sec = seconds % 60;
-    return `${min}:${sec.toString().padStart(2, '0')}`;
-  };
-
   return (
-    <div className="flex flex-col items-center justify-center py-20 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center py-16 px-4 bg-background">
       <div className="w-full max-w-md relative">
-        {/* Background ambient glow matching theme */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-accent-warning/20 blur-[100px] rounded-full pointer-events-none"></div>
-        
-        <Card className="relative z-10 w-full p-2">
-          <CardContent className="flex flex-col space-y-6 pt-6">
+
+        {/* Ambient glow — amber for password reset */}
+        <div className="absolute inset-0 -z-0 flex items-center justify-center pointer-events-none">
+          <div className="w-72 h-72 bg-accent-warning/10 rounded-full blur-[80px]" />
+        </div>
+
+        <Card className="relative z-10">
+          <CardContent className="pt-8 pb-6 px-7 flex flex-col gap-6">
+
             {!isSent ? (
+              /* ── Request state ─────────────────────────────── */
               <>
-                <div className="text-center space-y-2">
-                  <div className="inline-flex justify-center items-center w-12 h-12 rounded-xl bg-surface-active mb-2 border border-border-light shadow-glass">
-                    <Mail className="w-6 h-6 text-accent-warning" />
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <div className="w-11 h-11 rounded-xl bg-accent-warning/10 border border-accent-warning/25 flex items-center justify-center mb-1">
+                    <Mail className="w-5 h-5 text-accent-warning" />
                   </div>
-                  <h1 className="text-2xl font-bold tracking-tight text-text-primary">Reset Password</h1>
-                  <p className="text-sm text-text-secondary">
-                    Enter the email associated with your account and we'll send you a secure link to reset your password.
+                  <h1 className="text-xl font-semibold tracking-tight text-text-primary">
+                    Reset your password
+                  </h1>
+                  <p className="text-sm text-text-muted max-w-xs">
+                    Enter your account email and we'll send you a secure OTP to reset your password.
                   </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                   {error && (
-                    <div className="p-3 bg-accent-error/10 border border-accent-error/50 rounded text-sm text-accent-error text-center">
+                    <div className="flex items-center gap-2 p-3 rounded-md bg-accent-error/10 border border-accent-error/30 text-accent-error text-sm">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
                       {error}
                     </div>
                   )}
-                  
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-text-primary">Email</label>
-                    <Input 
-                      name="email"
-                      type="email" 
-                      placeholder="name@company.com" 
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        setError(null);
-                      }}
-                      error={error ? true : false}
-                    />
-                  </div>
 
-                  <Button type="submit" className="w-full bg-accent-warning hover:bg-amber-600 shadow-[0_0_15px_rgba(245,158,11,0.3)] border-amber-500 mt-2" disabled={isLoading}>
-                    {isLoading ? 'Sending...' : 'Send Reset Link'}
+                  <Input
+                    label="Email address"
+                    name="email"
+                    type="email"
+                    placeholder="name@company.com"
+                    icon={Mail}
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(null); }}
+                    error={error}
+                    autoComplete="email"
+                  />
+
+                  <Button
+                    type="submit"
+                    size="md"
+                    className="w-full !bg-accent-warning hover:!bg-amber-500 !shadow-none"
+                    loading={isLoading}
+                  >
+                    {isLoading ? 'Sending OTP…' : 'Send reset OTP'}
                   </Button>
                 </form>
 
-                <div className="text-center text-sm">
-                  <Link to="/login" className="text-text-secondary hover:text-white font-medium flex items-center justify-center transition-colors">
-                    <ArrowLeft className="w-4 h-4 mr-2" /> Back to Log in
+                <div className="flex items-center justify-center">
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors duration-fast"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    Back to login
                   </Link>
                 </div>
               </>
             ) : (
-              // Success State
-              <div className="text-center space-y-6 py-4">
-                <div className="inline-flex justify-center items-center w-16 h-16 rounded-full bg-accent-success/10 border border-accent-success/30 shadow-[0_0_20px_rgba(39,201,63,0.2)] mb-2">
-                  <Mail className="w-8 h-8 text-accent-success" />
-                </div>
-                <h1 className="text-2xl font-bold tracking-tight text-text-primary">Check your inbox</h1>
-                <p className="text-sm text-text-secondary max-w-sm mx-auto">
-                  We've emailed a password reset link to <span className="font-medium text-white">{email}</span>. Click the link to securely choose a new password.
-                </p>
-
-                <div className="inline-flex items-center space-x-2 bg-surface text-text-muted px-4 py-3 rounded-xl border border-border text-sm font-mono shadow-inner">
-                  <Timer className={`w-4 h-4 ${timeLeft < 60 ? 'text-accent-error animate-pulse' : 'text-primary'}`} />
-                  <span className={`${timeLeft < 60 ? 'text-accent-error' : 'text-text-primary'}`}>
-                    Link expires in {formatTime(timeLeft)}
-                  </span>
+              /* ── Sent / success state ──────────────────────── */
+              <div className="flex flex-col items-center gap-4 text-center py-2">
+                <div className="w-14 h-14 rounded-full bg-accent-success/10 border border-accent-success/25 flex items-center justify-center">
+                  {/* Different icon from request state — checkmark on envelope */}
+                  <svg className="w-7 h-7 text-accent-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <rect x="2" y="6" width="20" height="14" rx="2" />
+                    <path d="M2 9l10 6.5L22 9" strokeLinecap="round" />
+                    <path d="M15 16l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </div>
 
-                <div className="pt-6 border-t border-border mt-4">
-                  <p className="text-sm text-text-secondary mb-4">Didn't receive it? Check your spam folder.</p>
-                  <Button variant="secondary" className="w-full" onClick={() => setIsSent(false)}>
+                <div>
+                  <h1 className="text-xl font-semibold text-text-primary mb-1">Check your inbox</h1>
+                  <p className="text-sm text-text-muted max-w-xs mx-auto">
+                    We've sent an OTP to{' '}
+                    <span className="font-medium text-text-primary">{email}</span>.
+                    Use it to set a new password.
+                  </p>
+                </div>
+
+                {/* Expiry timer */}
+                <div className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border font-mono text-sm
+                  ${timeLeft < 60
+                    ? 'bg-accent-error/10 border-accent-error/30 text-accent-error'
+                    : 'bg-surface border-border text-primary'
+                  }`}
+                >
+                  <Timer className={`w-4 h-4 ${timeLeft < 60 ? 'animate-pulse' : ''}`} />
+                  OTP expires in {formatTime(timeLeft)}
+                </div>
+
+                <div className="w-full h-px bg-border" />
+
+                <div className="w-full flex flex-col gap-3">
+                  <p className="text-xs text-text-muted">
+                    Didn't receive it? Check your spam folder or try another email.
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    className="w-full"
+                    icon={<RefreshCw className="w-4 h-4" />}
+                    onClick={() => { setIsSent(false); setError(null); }}
+                  >
                     Try another email
                   </Button>
                 </div>
               </div>
             )}
           </CardContent>
+
+          {/* Trust strip */}
+          <div className="px-7 py-3 border-t border-border bg-background/40 flex items-center justify-center gap-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-accent-success shrink-0" />
+            <span className="text-[11px] text-text-muted">
+              End-to-end encrypted · SOC 2 ready · No tracking
+            </span>
+          </div>
         </Card>
+
       </div>
     </div>
   );
