@@ -9,8 +9,10 @@ import {
   deleteMemberSchema,
   inviteDeleteSchema,
   pendingInvitesSchema,
+  createOrgSchema,
 } from "./organizationSchema.js";
 
+// POST /organizations                  → create an organization
 // GET  /organizations/:orgId           → get org details
 // PUT  /organizations/:orgId           → update org name
 // GET  /organizations/:orgId/members   → list all members
@@ -20,6 +22,12 @@ import {
 // DELETE /organizations/:orgId/invites/:inviteId
 
 export default async function organizationRoutes(fastify) {
+  fastify.post(
+    "/organizations",
+    { schema: createOrgSchema, preHandler: [authenticate] },
+    orgController.createOrganization,
+  );
+
   fastify.get(
     "/organizations/:orgId",
     { schema: orgResSchema, preHandler: [authenticate, authorise("member")] },

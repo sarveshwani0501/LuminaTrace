@@ -128,6 +128,30 @@ const inviteDeleteSchema = {
   },
 };
 
+// schema for POST /organizations
+const createOrgSchema = {
+  body: {
+    type: "object",
+    required: ["name"],
+    properties: {
+      name: { type: "string", minLength: 1 },
+    },
+  },
+  response: {
+    201: {
+      type: "object",
+      properties: {
+        id: uuidSchema,
+        name: { type: "string" },
+        slug: { type: "string" },
+        plan: { type: "string" },
+        created_at: { type: "string" },
+        role: { type: "string" },
+      },
+    },
+  },
+};
+
 export {
   orgResSchema,
   orgSchema,
@@ -136,4 +160,5 @@ export {
   deleteMemberSchema,
   pendingInvitesSchema,
   inviteDeleteSchema,
+  createOrgSchema,
 };

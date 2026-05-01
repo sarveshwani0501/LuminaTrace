@@ -8,6 +8,13 @@
 
 import * as orgService from "./organizationService.js";
 
+export async function createOrganization(req, reply) {
+  const { name } = req.body;
+  const userId = req.user.userId;
+  const res = await orgService.createNewOrganization(userId, name);
+  return reply.code(201).send(res);
+}
+
 export async function getOrgDetails(req, reply) {
   const { orgId } = req.params;
   if (!orgId) {

@@ -12,6 +12,7 @@ import crypto from "crypto";
 import * as organizationRepo from "./organizationRepo.js";
 import { slugify } from "../../utils/slugify.js";
 import nodemailer from "nodemailer";
+import { pool } from "../../config/database.js";
 import config from "../../config/index.js";
 
 const transporter = nodemailer.createTransport({
@@ -22,6 +23,36 @@ const transporter = nodemailer.createTransport({
     pass: config.smtp?.pass || "dummy",
   },
 });
+
+export async function createNewOrganization(userId, orgName) {
+  const slug = slugify(orgName);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    
+    const orgRes = await client.query(
+      `INSERT INTO organizations (name, slug) VALUES ($1, $2) RETURNING id, name, slug, plan, created_at`,
+      [orgName, slug]
+    );
+    const org = orgRes.rows[0];
+
+    await client.query(
+      `INSERT INTO organization_members (user_id, organization_id, role) VALUES ($1, $2, $3)`,
+      [userId, org.id, "owner"]
+    );
+
+    await client.query("COMMIT");
+    return {
+      ...org,
+      role: "owner"
+    };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
 
 export async function organizationDetails(orgId) {
   const org = await organizationRepo.getOrganizationDetails(orgId);
