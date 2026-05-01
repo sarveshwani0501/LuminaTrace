@@ -17,15 +17,16 @@ export const fetchOrganizations = createAsyncThunk(
   }
 );
 
+import { orgApi } from '../../api/org';
+
 export const createOrganization = createAsyncThunk(
   'org/createOrganization',
   async (orgData, { rejectWithValue }) => {
     try {
-      // Wait, there is no generic POST /organizations in org route. 
-      // Fastify schema creates the org during `/auth/signup`.
-      return rejectWithValue('Organizations are created dynamically at Signup');
+      const response = await orgApi.createOrg(orgData);
+      return response.data;
     } catch (error) {
-      return rejectWithValue('Failed to create organization');
+      return rejectWithValue(error.response?.data?.message || 'Failed to create organization');
     }
   }
 );
