@@ -10,7 +10,9 @@ import {
   getInviteByToken,
   markInviteAccepted,
   updateEmailVerificationStatus,
-  updatePassword
+  updatePassword,
+  getUserById,
+  updatePasswordById,
 } from "./authRepository.js";
 import { hashText, compareHash } from "../../utils/hash.js";
 

@@ -70,6 +70,7 @@ const Servers = () => {
         const localMetrics = globalMetrics.filter(m => m.server_id === server.id);
         const cpuMetric = localMetrics.find(m => m.name === 'cpu_usage' || m.name === 'cpu');
         const memMetric = localMetrics.find(m => m.name === 'memory_used_percent' || m.name === 'memory');
+        
         return {
           ...server,
           // backend returns last_seen_at (raw SELECT *), normalise to one field
