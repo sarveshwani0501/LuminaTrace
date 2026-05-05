@@ -1,250 +1,358 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Clock, AlertCircle, Database, Server, Cpu, Layers, Link as LinkIcon, Info, Loader2 } from 'lucide-react';
+import {
+  X, AlertCircle, Database, Server,
+  Cpu, Layers, Info, Loader2, GitBranch
+} from 'lucide-react';
 import { spansApi } from '../../api/spans';
 
-const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
-  const [spans, setSpans] = useState([]);
-  const [totalDuration, setTotalDuration] = useState(1000);
-  const [hoveredSpan, setHoveredSpan] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+/* ─────────────────────────────────────────────────────────────────
+   MODULE-SCOPE PURE HELPERS  (stable — never recreated on render)
+───────────────────────────────────────────────────────────────── */
 
+/** Pick an icon based on the span's service name */
+const getServiceIcon = (service = '') => {
+  const s = service.toLowerCase();
+  if (s.includes('gateway'))                    return <Layers  className="w-3.5 h-3.5" />;
+  if (s.includes('auth'))                       return <Cpu     className="w-3.5 h-3.5" />;
+  if (s.includes('redis') || s.includes('postgres') || s.includes('db'))
+                                                return <Database className="w-3.5 h-3.5" />;
+  return                                               <Server  className="w-3.5 h-3.5" />;
+};
+
+/** Gantt bar color + glow using theme tokens */
+const getBarStyle = (level = '') => {
+  switch (level?.toUpperCase()) {
+    case 'ERROR':    return { background: '#EF4444', boxShadow: '0 0 8px rgba(239,68,68,0.45)' };
+    case 'CRITICAL': return { background: '#EF4444', boxShadow: '0 0 8px rgba(239,68,68,0.6)' };
+    case 'WARN':     return { background: '#F59E0B', boxShadow: '0 0 8px rgba(245,158,11,0.35)' };
+    case 'DEBUG':    return { background: '#6366F1', boxShadow: '0 0 6px rgba(99,102,241,0.3)' };
+    default:         return { background: '#7C3AED', boxShadow: '0 0 8px rgba(124,58,237,0.35)' };
+  }
+};
+
+/** Left-offset percentage for a span bar */
+const calcLeft  = (offset, total) => `${(Number(offset) / total) * 100}%`;
+/** Width percentage for a span bar — minimum 0.5% so it's always visible */
+const calcWidth = (dur,    total) => `${Math.max((Number(dur) / total) * 100, 0.5)}%`;
+
+/* ─────────────────────────────────────────────────────────────────
+   LOADING / ERROR / EMPTY states
+───────────────────────────────────────────────────────────────── */
+const CenteredState = ({ children }) => (
+  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/80">
+    {children}
+  </div>
+);
+
+/* ─────────────────────────────────────────────────────────────────
+   SPAN ROW  (memoised — only re-renders when hovered state changes)
+───────────────────────────────────────────────────────────────── */
+const SpanRow = memo(({ span, totalDuration, isHovered, isDimmed, onHover, onLeave }) => {
+  const barStyle  = getBarStyle(span.level);
+  const leftPct   = calcLeft(span.offset,   totalDuration);
+  const widthPct  = calcWidth(span.duration, totalDuration);
+  const isError   = span.level?.toUpperCase() === 'ERROR' || span.level?.toUpperCase() === 'CRITICAL';
+
+  return (
+    <div
+      onMouseEnter={onHover}
+      onMouseLeave={onLeave}
+      className={`flex w-full border-b border-border/30 transition-all duration-fast
+        ${isDimmed   ? 'opacity-25' : 'opacity-100'}
+        ${isHovered  ? 'bg-surface-hover' : 'hover:bg-surface/40'}
+      `}
+    >
+      {/* ── Left panel: tree label ── */}
+      <div className="w-[38%] flex items-center gap-2 px-4 py-2.5 border-r border-border/40 min-w-0">
+        <div
+          style={{ marginLeft: `${span.depth * 18}px` }}
+          className="flex items-center gap-2 min-w-0"
+        >
+          {/* Depth connector lines */}
+          {span.depth > 0 && (
+            <div className="relative flex items-center shrink-0" style={{ width: '14px' }}>
+              <div className="absolute -top-5 left-0 w-px h-7 bg-border/50" />
+              <div className="absolute top-1/2 left-0 w-3 h-px bg-border/50" />
+            </div>
+          )}
+
+          {/* Service icon */}
+          <span
+            className="shrink-0"
+            style={{ color: isError ? '#EF4444' : span.level?.toUpperCase() === 'WARN' ? '#F59E0B' : '#7C3AED' }}
+          >
+            {getServiceIcon(span.service)}
+          </span>
+
+          {/* Name + service tag */}
+          <div className="min-w-0">
+            <p className={`text-xs font-medium truncate transition-colors duration-fast
+              ${isHovered ? 'text-text-primary' : 'text-text-secondary'}
+              ${isError   ? '!text-accent-error' : ''}
+            `}>
+              {span.name}
+            </p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[9px] font-mono text-text-muted bg-surface-active border border-border rounded px-1.5 py-px truncate max-w-[120px]">
+                {span.service}
+              </span>
+              {isError && <AlertCircle className="w-2.5 h-2.5 text-accent-error shrink-0" />}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Right panel: Gantt bar ── */}
+      <div className="w-[62%] relative flex items-center px-2 py-2.5" style={{ minHeight: '40px' }}>
+        {/* The bar */}
+        <div
+          className="absolute h-3 rounded-sm z-10 transition-opacity duration-fast"
+          style={{
+            left:   leftPct,
+            width:  widthPct,
+            ...barStyle,
+            opacity: isHovered ? 1 : 0.8,
+          }}
+        >
+          {/* Gloss overlay */}
+          <div className="absolute inset-0 rounded-sm bg-white/10 mix-blend-overlay" />
+        </div>
+
+        {/* Duration label — rendered outside/right of bar */}
+        <span
+          className="absolute font-mono text-[9px] text-text-muted pointer-events-none z-20 whitespace-nowrap"
+          style={{ left: `calc(${leftPct} + ${widthPct} + 5px)` }}
+        >
+          {span.duration}ms
+        </span>
+      </div>
+    </div>
+  );
+});
+SpanRow.displayName = 'SpanRow';
+
+/* ─────────────────────────────────────────────────────────────────
+   TRACE WATERFALL MODAL
+───────────────────────────────────────────────────────────────── */
+const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
+  const [spans,         setSpans]         = useState([]);
+  const [totalDuration, setTotalDuration] = useState(1000);
+  const [hoveredSpan,   setHoveredSpan]   = useState(null);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState(null);
+
+  /* ── Fetch spans ─────────────────────────────────────────── */
   useEffect(() => {
     if (!traceId || !projectId) return;
+    setLoading(true);
+    setError(null);
 
-    const fetchSpans = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await spansApi.getSpansByTrace(traceId, projectId);
-        const data = res.data;
+    spansApi.getSpansByTrace(traceId, projectId)
+      .then(res => {
+        const data = res.data || [];
         setSpans(data);
-        // totalDuration = the span with the largest offset + duration
         if (data.length > 0) {
-          const max = data.reduce((acc, s) => Math.max(acc, Number(s.offset) + Number(s.duration)), 0);
+          const max = data.reduce(
+            (acc, s) => Math.max(acc, Number(s.offset) + Number(s.duration)), 0
+          );
           setTotalDuration(max || 1);
         }
-      } catch (err) {
-        setError('Failed to load trace spans.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSpans();
+      })
+      .catch(() => setError('Failed to load trace spans.'))
+      .finally(() => setLoading(false));
   }, [traceId, projectId]);
+
+  /* ── Close on Escape key ─────────────────────────────────── */
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
 
   if (!traceId) return null;
 
-  // Helper icons for service layer distinction
-  const getServiceIcon = (service) => {
-    if (service.includes('gateway')) return <Layers className="w-3.5 h-3.5" />;
-    if (service.includes('auth')) return <Cpu className="w-3.5 h-3.5" />;
-    if (service.includes('redis') || service.includes('postgres')) return <Database className="w-3.5 h-3.5" />;
-    return <Server className="w-3.5 h-3.5" />;
-  };
+  /* ── Axis tick values ───────────────────────────────────── */
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(totalDuration * f));
 
-  const getBarColor = (level) => {
-    switch (level) {
-      case 'ERROR': return 'bg-[#ef4444] shadow-[0_0_10px_rgba(239,68,68,0.5)]';
-      case 'WARN': return 'bg-[#f59e0b] shadow-[0_0_10px_rgba(245,158,11,0.3)]';
-      case 'DEBUG': return 'bg-[#06b6d4]';
-      default: return 'bg-[#818cf8] shadow-[0_0_10px_rgba(129,140,248,0.3)]';
-    }
-  };
+  /* ─────────────────────────────────────────────────────────── */
+  const modal = (
+    <div
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-5 bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-6xl bg-background border border-border rounded-card shadow-elevated flex flex-col overflow-hidden"
+        style={{ height: '85vh' }}
+        onClick={e => e.stopPropagation()}
+      >
 
-  const calculateWidth = (dur) => `${Math.max((Number(dur) / totalDuration) * 100, 0.5)}%`;
-  const calculateLeft = (offset) => `${(Number(offset) / totalDuration) * 100}%`;
-
-  const modalContent = (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm shadow-[0_0_100px_rgba(0,0,0,1)]">
-      
-      <div className="w-full max-w-7xl h-[85vh] bg-[#0d1117] border border-white/10 rounded-xl shadow-2xl flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
-        
-        {/* HEADER */}
-        <div className="px-6 py-4 border-b border-[#2d333b] flex justify-between items-center bg-[#161b22] shrink-0">
+        {/* ── Modal header ──────────────────────────────────── */}
+        <div className="flex items-start justify-between px-6 py-4 border-b border-border bg-surface shrink-0">
           <div>
-            <div className="flex items-center space-x-3 mb-1">
-              <h2 className="text-xl font-bold text-white tracking-tight">Trace Waterfall</h2>
-              <span className="px-2 py-0.5 bg-[#4b5563]/30 border border-[#4b5563]/50 rounded text-xs font-mono text-[#8b949e]">{traceId}</span>
+            <div className="flex items-center gap-3 mb-1">
+              <GitBranch className="w-4 h-4 text-primary/70" />
+              <h2 className="text-sm font-semibold text-text-primary">Trace waterfall</h2>
+              <span className="font-mono text-[10px] text-text-muted bg-background border border-border rounded px-2 py-px truncate max-w-[220px]">
+                {traceId}
+              </span>
             </div>
-            <p className="text-sm text-[#8b949e]">
+            <p className="text-xs text-text-muted ml-7">
               {spans.length > 0
-                ? <>Root: <span className="text-white font-mono bg-white/5 px-1 py-0.5 rounded">{spans[0]?.name || spans[0]?.service || 'Unknown'}</span></>
-                : <span className="text-[#4b5563]">Awaiting span data...</span>
+                ? <>Root: <span className="font-mono text-text-primary">{spans[0]?.name || spans[0]?.service || '—'}</span></>
+                : 'Awaiting span data…'
               }
             </p>
           </div>
-          
-          <div className="flex items-center space-x-6">
-             <div className="flex flex-col items-end">
-               <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase">Total Duration</span>
-               <span className="text-white font-mono font-bold text-lg">{totalDuration}<span className="text-sm font-normal text-[#8b949e]">ms</span></span>
-             </div>
-             <div className="flex flex-col items-end">
-               <span className="text-[10px] font-mono tracking-widest text-[#8b949e] uppercase">Spans Executed</span>
-               <span className="text-white font-mono font-bold text-lg">{spans.length}</span>
-             </div>
-             <button onClick={onClose} className="p-2 ml-4 hover:bg-white/10 rounded-full transition-colors text-[#8b949e] hover:text-white">
-                <X className="w-5 h-5" />
-             </button>
+
+          <div className="flex items-center gap-5 shrink-0">
+            {/* Stats */}
+            <div className="flex items-center gap-5">
+              <div className="flex flex-col items-end">
+                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Total duration</span>
+                <span className="font-mono font-semibold text-text-primary text-base leading-tight">
+                  {totalDuration}<span className="text-xs text-text-muted font-normal ml-0.5">ms</span>
+                </span>
+              </div>
+              <div className="w-px h-7 bg-border" />
+              <div className="flex flex-col items-end">
+                <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Spans</span>
+                <span className="font-mono font-semibold text-text-primary text-base leading-tight">{spans.length}</span>
+              </div>
+            </div>
+
+            {/* Close */}
+            <button
+              onClick={onClose}
+              className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-md transition-colors duration-fast"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        {/* GANTT HEADER AXIS */}
-        <div className="flex w-full bg-[#11151c] border-b border-[#2d333b] px-4 py-2 text-[10px] font-mono tracking-widest text-[#8b949e] uppercase shrink-0 sticky top-0 z-20 shadow-md">
-          <div className="w-[35%] pl-4">Execution Tree (Hierarchy)</div>
-          <div className="w-[65%] relative h-full">
-            <span className="absolute left-0">0ms</span>
-            <span className="absolute left-1/4 -translate-x-1/2">{Math.floor(totalDuration * 0.25)}ms</span>
-            <span className="absolute left-1/2 -translate-x-1/2">{Math.floor(totalDuration * 0.50)}ms</span>
-            <span className="absolute left-3/4 -translate-x-1/2">{Math.floor(totalDuration * 0.75)}ms</span>
+        {/* ── Axis header ───────────────────────────────────── */}
+        <div className="flex shrink-0 px-4 py-2 bg-background/50 border-b border-border text-[9px] font-mono text-text-muted select-none">
+          <div className="w-[38%] pl-2">Execution tree</div>
+          <div className="w-[62%] relative pr-2 h-4">
+            {ticks.map((ms, i) => (
+              <span
+                key={i}
+                className="absolute -translate-x-1/2"
+                style={{ left: `${i * 25}%` }}
+              >
+                {ms}ms
+              </span>
+            ))}
+            {/* Right-align last tick */}
             <span className="absolute right-0">{totalDuration}ms</span>
           </div>
         </div>
 
-        {/* TRACE TIMELINE CANVAS */}
-        <div className="flex-1 overflow-y-auto w-full no-scrollbar relative bg-[#0a0c10]">
+        {/* ── Timeline body ─────────────────────────────────── */}
+        <div className="flex-1 min-h-0 overflow-y-auto relative bg-[#0A0C10]">
 
-          {/* Loading State */}
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#0a0c10]">
-              <div className="flex flex-col items-center space-y-3">
-                <Loader2 className="w-8 h-8 text-[#818cf8] animate-spin" />
-                <span className="text-[#8b949e] text-sm font-mono">Fetching trace spans...</span>
-              </div>
-            </div>
-          )}
-
-          {/* Error State */}
-          {error && !loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#0a0c10]">
-              <div className="flex flex-col items-center space-y-3">
-                <AlertCircle className="w-8 h-8 text-[#ef4444]" />
-                <span className="text-[#ef4444] text-sm font-mono">{error}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Empty State */}
-          {!loading && !error && spans.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#0a0c10]">
-              <span className="text-[#4b5563] text-sm font-mono">No spans recorded for this trace yet.</span>
-            </div>
-          )}
-          
-          {/* Vertical Grid Lines */}
+          {/* Grid lines (overlay, pointer-events:none) */}
           {!loading && spans.length > 0 && (
-          <div className="absolute inset-y-0 right-0 w-[65%] pointer-events-none opacity-20">
-            <div className="absolute top-0 bottom-0 left-0 border-l border-white/10"></div>
-            <div className="absolute top-0 bottom-0 left-1/4 border-l border-white/10 border-dashed"></div>
-            <div className="absolute top-0 bottom-0 left-1/2 border-l border-white/10 border-dashed"></div>
-            <div className="absolute top-0 bottom-0 left-3/4 border-l border-white/10 border-dashed"></div>
-            <div className="absolute top-0 bottom-0 right-0 border-r border-white/10"></div>
-          </div>
+            <div className="absolute inset-y-0 right-0 w-[62%] pointer-events-none">
+              {[0, 25, 50, 75].map(pct => (
+                <div
+                  key={pct}
+                  className="absolute top-0 bottom-0 w-px bg-white/[0.04]"
+                  style={{ left: `${pct}%` }}
+                />
+              ))}
+              <div className="absolute top-0 bottom-0 right-0 w-px bg-white/[0.04]" />
+            </div>
           )}
 
-          {/* Span Lines Iterator */}
-          <div className="w-full relative py-2">
-            {spans.map((span, index) => (
-              <div 
-                key={span.id}
-                onMouseEnter={() => setHoveredSpan(span)}
-                onMouseLeave={() => setHoveredSpan(null)}
-                className={`flex w-full group relative ${hoveredSpan && hoveredSpan.id !== span.id ? 'opacity-30' : 'opacity-100'} transition-opacity duration-200 hover:bg-[#161b22]`}
-              >
-                
-                {/* Left Panel: Structuring & Text */}
-                <div className="w-[35%] flex items-center pr-4 py-2 border-r border-[#2d333b]">
-                   
-                   {/* Deep Indentation Graphics */}
-                   <div style={{ marginLeft: `${span.depth * 24}px` }} className="flex items-center">
-                      <div className="mr-3 text-[#4b5563] relative flex items-center justify-center">
-                         {span.depth > 0 && (
-                            <>
-                              <div className="absolute -top-4 -left-3 w-px h-6 bg-[#2d333b]"></div>
-                              <div className="absolute top-1/2 -left-3 w-4 h-px bg-[#2d333b]"></div>
-                            </>
-                         )}
-                         <span className="opacity-80" style={{ color: span.level === 'ERROR' ? '#ef4444' : span.level === 'WARN' ? '#f59e0b' : '#a5b4fc' }}>
-                           {getServiceIcon(span.service)}
-                         </span>
-                      </div>
-                      
-                      <div className="flex flex-col overflow-hidden">
-                        <span className="text-white text-sm font-semibold truncate group-hover:text-[#a5b4fc] transition-colors">{span.name}</span>
-                        <div className="flex items-center text-[#8b949e] space-x-2 mt-0.5">
-                           <span className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] font-mono">{span.service}</span>
-                           {span.level === 'ERROR' && <AlertCircle className="w-3 h-3 text-[#ef4444]" />}
-                        </div>
-                      </div>
-                   </div>
-                </div>
+          {/* Loading */}
+          {loading && (
+            <CenteredState>
+              <Loader2 className="w-7 h-7 text-primary animate-spin" />
+              <span className="text-sm font-mono text-text-muted">Loading spans…</span>
+            </CenteredState>
+          )}
 
-                {/* Right Panel: Gantt Positioning Canvas */}
-                <div className="w-[65%] relative py-2 px-2 flex items-center">
-                   
-                   {/* The Absolute Positioned Horizon Bar */}
-                   <div 
-                      className={`h-4 rounded-sm relative cursor-pointer ${getBarColor(span.level)} opacity-90 group-hover:opacity-100 transition-all z-10 flex min-w-[2px] items-center`}
-                      style={{ 
-                        left: calculateLeft(span.offset), 
-                        width: calculateWidth(span.duration),
-                      }}
-                   >
-                     <div className="absolute left-0 right-0 top-0 bottom-0 bg-white/10 mix-blend-overlay"></div>
-                   </div>
+          {/* Error */}
+          {!loading && error && (
+            <CenteredState>
+              <AlertCircle className="w-7 h-7 text-accent-error" />
+              <span className="text-sm font-mono text-accent-error">{error}</span>
+            </CenteredState>
+          )}
 
-                   {/* Trace Anchor Text rendering conditionally outside the bar if it's too small */}
-                   <span 
-                      className="absolute font-mono text-[9px] text-[#8b949e] pointer-events-none group-hover:text-white transition-colors z-0"
-                      style={{ 
-                        left: calculateLeft(span.offset), 
-                        transform: `translateX(calc(${calculateWidth(span.duration)} + 8px))`
-                      }}
-                   >
-                     {span.duration}ms
-                   </span>
-                </div>
+          {/* Empty */}
+          {!loading && !error && spans.length === 0 && (
+            <CenteredState>
+              <GitBranch className="w-7 h-7 text-border" />
+              <span className="text-sm font-mono text-text-muted">No spans recorded for this trace.</span>
+            </CenteredState>
+          )}
 
-              </div>
-            ))}
-          </div>
-
+          {/* Span rows */}
+          {!loading && !error && spans.map((span) => (
+            <SpanRow
+              key={span.id}
+              span={span}
+              totalDuration={totalDuration}
+              isHovered={hoveredSpan?.id === span.id}
+              isDimmed={!!hoveredSpan && hoveredSpan.id !== span.id}
+              onHover={() => setHoveredSpan(span)}
+              onLeave={() => setHoveredSpan(null)}
+            />
+          ))}
         </div>
 
-        {/* BOTTOM METADATA INSPECTOR (Active Hover Detail) */}
-        <div className="h-[80px] bg-[#161b22] border-t border-[#2d333b] px-6 py-3 flex items-center shrink-0 shadow-[0_-10px_20px_rgba(0,0,0,0.2)] z-30">
-           {hoveredSpan ? (
-             <div className="flex w-full justify-between items-center animate-in fade-in slide-in-from-bottom-2 duration-200">
-               <div className="flex items-center space-x-4">
-                  <span className={`p-2 rounded-lg ${hoveredSpan.level === 'ERROR' ? 'bg-[#450a0a] text-[#ef4444]' : 'bg-[#1c212b] text-[#818cf8]'}`}>
-                     {hoveredSpan.level === 'ERROR' ? <AlertCircle className="w-5 h-5"/> : <Info className="w-5 h-5"/>}
+        {/* ── Bottom inspector ──────────────────────────────── */}
+        <div className="shrink-0 h-20 border-t border-border bg-surface px-6 flex items-center justify-between gap-6">
+          {hoveredSpan ? (
+            <>
+              {/* Left: icon + name + service */}
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
+                  ${hoveredSpan.level?.toUpperCase() === 'ERROR' || hoveredSpan.level?.toUpperCase() === 'CRITICAL'
+                    ? 'bg-accent-error/10 text-accent-error'
+                    : 'bg-primary/10 text-primary'
+                  }`}
+                >
+                  {hoveredSpan.level?.toUpperCase() === 'ERROR'
+                    ? <AlertCircle className="w-4 h-4" />
+                    : <Info className="w-4 h-4" />
+                  }
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-text-primary truncate">{hoveredSpan.name}</p>
+                  <p className="text-xs font-mono text-text-muted truncate">
+                    {hoveredSpan.meta || `${hoveredSpan.service} layer`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Right: stats */}
+              <div className="flex items-center gap-0 bg-background border border-border rounded-lg overflow-hidden shrink-0">
+                <div className="flex flex-col px-4 py-2.5 border-r border-border">
+                  <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Start offset</span>
+                  <span className="font-mono text-xs text-text-secondary mt-0.5">+{hoveredSpan.offset}ms</span>
+                </div>
+                <div className="flex flex-col px-4 py-2.5 border-r border-border">
+                  <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Duration</span>
+                  <span className="font-mono text-sm font-semibold text-text-primary mt-0.5">
+                    {hoveredSpan.duration}<span className="text-[10px] text-text-muted font-normal">ms</span>
                   </span>
-                  <div>
-                    <h3 className="text-white font-medium text-sm">{hoveredSpan.name}</h3>
-                    <p className="text-[#8b949e] font-mono text-xs">{hoveredSpan.meta || `Executing inside ${hoveredSpan.service} layer`}</p>
-                  </div>
-               </div>
-               
-               <div className="flex space-x-6 bg-[#0d1117] px-4 py-2 rounded border border-white/5">
-                 <div className="flex flex-col">
-                   <span className="text-[#8b949e] text-[9px] uppercase font-mono tracking-wider">Start Offset</span>
-                   <span className="text-[#c9d1d9] font-mono text-xs">+{hoveredSpan.offset}ms</span>
-                 </div>
-                 <div className="w-px h-6 bg-white/10"></div>
-                 <div className="flex flex-col">
-                   <span className="text-[#8b949e] text-[9px] uppercase font-mono tracking-wider">Time Isolated</span>
-                   <span className="text-white font-mono text-sm font-bold">{hoveredSpan.duration}<span className="text-[10px] text-[#8b949e] font-normal">ms</span></span>
-                 </div>
-               </div>
-             </div>
-           ) : (
-             <div className="w-full h-full flex items-center justify-center text-[#4b5563] text-sm font-mono opacity-60">
-                 Hover over a horizontal trace span to inspect metadata payload...
-             </div>
-           )}
+                </div>
+                <div className="flex flex-col px-4 py-2.5">
+                  <span className="text-[9px] font-mono uppercase tracking-widest text-text-muted">Service</span>
+                  <span className="font-mono text-xs text-primary mt-0.5">{hoveredSpan.service}</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="w-full text-center text-xs font-mono text-text-muted/50">
+              Hover a span to inspect its details
+            </p>
+          )}
         </div>
 
       </div>
@@ -252,7 +360,7 @@ const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
   );
 
   if (typeof document === 'undefined') return null;
-  return createPortal(modalContent, document.body);
+  return createPortal(modal, document.body);
 };
 
 export default TraceWaterfallModal;
