@@ -144,7 +144,7 @@ export const updateRuleSchema = {
     type: "object",
     properties: {
       threshold: {
-        type: "string",
+        type: "number",
       },
       email: {
         type: "string",
@@ -157,24 +157,12 @@ export const updateRuleSchema = {
       properties: {
         id: uuidSchema,
         project_id: uuidSchema,
-        metric_name: {
-          type: "string",
-        },
-        condition: {
-          type: "string",
-        },
-        threshold: {
-          type: "number",
-        },
-        notification_email: {
-          type: "string",
-        },
-        is_active: {
-          type: "boolean",
-        },
-        created_at: {
-          type: "string",
-        },
+        metric_name: { type: "string" },
+        condition: { type: "string" },
+        threshold: { type: "number" },
+        notification_email: { type: "string" },
+        is_active: { type: "boolean" },
+        created_at: { type: "string" },
       },
     },
   },
@@ -232,12 +220,13 @@ export const toggleStatusSchema = {
 };
 
 export const getAllEventsSchema = {
-  queryString: {
+  // NOTE: must be lowercase 'querystring' for Fastify to apply validation
+  querystring: {
     type: "object",
-    required: ["projectId", "serverId"],
+    required: ["projectId"],
     properties: {
       projectId: uuidSchema,
-      serverId: uuidSchema,
+      serverId: uuidSchema,   // optional filter
       status: { type: "string" },
       limit: { type: "string" },
       offset: { type: "string" },
