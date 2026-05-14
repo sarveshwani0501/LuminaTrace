@@ -13,6 +13,7 @@ import DocsPage from './pages/public/Docs';
 import Pricing from './pages/public/Pricing';
 import Integrations from './pages/public/Integrations';
 import Legal from './pages/public/Legal';
+import Changelog from './pages/public/ChangeLog';
 import Dashboard from './pages/app/Dashboard';
 import Metrics from './pages/app/Metrics';
 import Logs from './pages/app/Logs';
@@ -32,6 +33,7 @@ function App() {
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/privacy" element={<Legal type="privacy" />} />
           <Route path="/terms" element={<Legal type="terms" />} />
+          <Route path="/changelog" element={<Changelog />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/verify-otp" element={<OTPVerificationPage />} />
