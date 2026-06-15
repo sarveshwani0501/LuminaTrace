@@ -1,64 +1,56 @@
-// import kafka from "../config/kafka.js";
-// import logger from "../utils/logger.js";
-// import { topics } from "./topics.js";
+import kafka from "../config/kafka.js";
+import { topics } from "./topics.js";
 
-// const admin = kafka.admin();
+export async function initializeTopics() {
+  const admin = kafka.admin();
+  try {
+    await admin.connect();
 
-// const topicConfigs = [
-//   {
-//     topic: topics.LOGS,
-//     numPartitions: 3,
-//     replicationFactor: 1, // Single broker, use 1. Production: use 3
-//     configEntries: [
-//       { name: "retention.ms", value: "604800000" }, // 7 days
-//       { name: "compression.type", value: "snappy" },
-//       { name: "max.message.bytes", value: "1048576" }, // 1MB
-//     ],
-//   },
-//   {
-//     topic: topics.METRICS,
-//     numPartitions: 3,
-//     replicationFactor: 1,
-//     configEntries: [
-//       { name: "retention.ms", value: "2592000000" }, // 30 days
-//       { name: "compression.type", value: "snappy" },
-//       { name: "max.message.bytes", value: "1048576" },
-//     ],
-//   },
-// ];
+    const existingTopics = await admin.listTopics();
 
-// export async function initializeTopics() {
-//   try {
-//     await admin.connect();
-//     logger.info("Connected to Kafka admin");
+    const topicsToCreate = [
+      {
+        topic: topics.LOGS,
+        numPartitions: 3,
+        replicationFactor: 1,
+        configEntries: [
+          { name: "retention.ms", value: "604800000" },      // 7 days
+          { name: "compression.type", value: "snappy" },
+          { name: "max.message.bytes", value: "1048576" },   // 1MB
+        ],
+      },
+      {
+        topic: topics.METRICS,
+        numPartitions: 3,
+        replicationFactor: 1,
+        configEntries: [
+          { name: "retention.ms", value: "2592000000" },     // 30 days
+          { name: "compression.type", value: "snappy" },
+          { name: "max.message.bytes", value: "1048576" },
+        ],
+      },
+      {
+        topic: topics.SPANS,
+        numPartitions: 3,
+        replicationFactor: 1,
+        configEntries: [
+          { name: "retention.ms", value: "604800000" },      // 7 days
+          { name: "compression.type", value: "snappy" },
+          { name: "max.message.bytes", value: "1048576" },
+        ],
+      },
+    ].filter((t) => !existingTopics.includes(t.topic));     // Skip if already exists
 
-//     // Get existing topics
-//     const existingTopics = await admin.listTopics();
-//     logger.info({ existingTopics }, "Existing Kafka topics");
-
-//     // Create topics that don't exist
-//     const topicsToCreate = topicConfigs.filter(
-//       (config) => !existingTopics.includes(config.topic),
-//     );
-
-//     if (topicsToCreate.length > 0) {
-//       await admin.createTopics({
-//         topics: topicsToCreate,
-//         waitForLeaders: true,
-//       });
-//       logger.info(
-//         { topics: topicsToCreate.map((t) => t.topic) },
-//         "Topics created successfully",
-//       );
-//     } else {
-//       logger.info("All topics already exist");
-//     }
-
-//     await admin.disconnect();
-//   } catch (error) {
-//     logger.error({ error }, "Failed to initialize topics");
-//     throw error;
-//   }
-// }
-
-// for production
+    if (topicsToCreate.length > 0) {
+      await admin.createTopics({ topics: topicsToCreate, waitForLeaders: true });
+      console.log("Kafka topics created:", topicsToCreate.map((t) => t.topic));
+    } else {
+      console.log("All Kafka topics already exist.");
+    }
+  } catch (error) {
+    console.error("Failed to initialize Kafka topics:", error);
+    throw error; 
+  } finally {
+    await admin.disconnect();
+  }
+}

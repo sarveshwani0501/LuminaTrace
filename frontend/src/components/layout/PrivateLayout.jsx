@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import Sidebar from './Sidebar';
 import EmptyProjectState from '../projects/EmptyProjectState';
@@ -8,11 +8,17 @@ import { fetchProjects } from '../../store/slices/projectSlice';
 
 const PrivateLayout = () => {
   const dispatch = useDispatch();
+  const { isAuthenticated }                   = useSelector(state => state.auth);
   const { currentOrg }                        = useSelector(state => state.org);
   const { currentProject, isLoading, list }   = useSelector(state => state.project);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [hasFetched,      setHasFetched]      = useState(false);
+
+  // Auth guard — redirect to login immediately if not authenticated
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   useEffect(() => {
     if (currentOrg?.id) {

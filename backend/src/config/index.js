@@ -115,6 +115,10 @@ const config = {
     pass: getEnvVar("SMTP_PASSWORD", ""),
     from: getEnvVar("SMTP_EMAIL", ""),
   },
+
+  app_url: {
+    frontend: getEnvVar("FRONTEND_URL", "http://localhost:5173"),
+  },
 };
 
 /**

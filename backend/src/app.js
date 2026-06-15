@@ -16,6 +16,7 @@ import metricsRoute from "./modules/metrics/metricsRoute.js";
 import alertRoute from "./modules/alerts/alertRoute.js";
 import serverRoute from "./modules/servers/serverRoute.js";
 import spansRoute from "./modules/spans/spansRoute.js";
+import { uptimeRoute } from "./modules/uptime/uptimeRoute.js";
 import {
   connectProducer,
   disconnectProducer,
@@ -27,6 +28,8 @@ import { startSpansWorker } from "./kafka/workers/spansWorker.js";
 import redis from "./config/redis.js";
 import { startBackgroundJobs } from "./jobs/index.js";
 import { initializeSocketServer } from "./sockets/socket.server.js";
+import { initializeTopics } from "./kafka/initTopics.js";
+
 
 export async function buildApp() {
   const fastify = Fastify({
@@ -58,6 +61,18 @@ export async function buildApp() {
   fastify.setErrorHandler(errorHandler);
 
   initializeSocketServer(fastify);
+
+
+  
+  try {
+    await initializeTopics();
+    fastify.log.info("Kafka topics initialized");
+  } catch (error) {
+    fastify.log.error({ error }, "Failed to initialize Kafka topics — aborting startup");
+    process.exit(1);
+  }
+
+
 
   try {
     await connectProducer();
@@ -113,6 +128,8 @@ export async function buildApp() {
   await fastify.register(serverRoute);
   
   await fastify.register(spansRoute);
+
+  await fastify.register(uptimeRoute);
 
   if (config.app.env !== "test") {
     startBackgroundJobs();

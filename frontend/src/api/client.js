@@ -14,10 +14,13 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Here we can catch 401 Unauthorized errors to dispatch a logout event globally later
+    // Redirect to login on 401 — handles session expiry mid-session.
+    // The primary auth guard lives in PrivateLayout (checks Redux isAuthenticated).
     if (error.response && error.response.status === 401) {
-      console.warn('Unauthorized request, user might need to log in again.');
-      // window.location.href = '/login'; // Optional: forces redirect
+      // Only redirect if we're currently inside an app route to avoid redirect loops
+      if (window.location.pathname.startsWith('/app')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

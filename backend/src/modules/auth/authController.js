@@ -98,7 +98,12 @@ export function authController(fastify) {
   }
 
   async function logoutHandler(req, reply) {
-    reply.clearCookie("token", { path: "/" });
+    reply.clearCookie("token", {
+      path: "/",
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
 
     return reply.code(200).send({
       message: "Logged out successfully",

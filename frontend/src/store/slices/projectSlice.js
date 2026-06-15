@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { projectApi } from '../../api/project';
+import { logoutUser } from './authSlice';
 
 export const fetchProjects = createAsyncThunk(
   'project/fetchProjects',
@@ -96,6 +97,13 @@ const projectSlice = createSlice({
       .addCase(createProject.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+      })
+      // Clear all project state on logout so the next user starts fresh
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.list = [];
+        state.currentProject = null;
+        state.isLoading = false;
+        state.error = null;
       });
   },
 });

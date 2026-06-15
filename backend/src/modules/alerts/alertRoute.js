@@ -63,7 +63,7 @@ export default function alertRoute(fastify, options, done) {
     "/alerts/:id",
     {
       schema: deleteRuleSchema,
-      preHandler: [authenticate, authorise("admin")],
+      preHandler: [authenticate, authorise("owner")],
     },
     alertController.deleteRule,
   );

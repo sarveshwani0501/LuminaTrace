@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { verifyOTP, loginUser } from './authSlice';
+import { verifyOTP, loginUser, logoutUser } from './authSlice';
 
 export const fetchOrganizations = createAsyncThunk(
   'org/fetchOrganizations',
@@ -98,6 +98,13 @@ const orgSlice = createSlice({
       .addCase(createOrganization.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+      })
+      // Clear all org state on logout so the next user starts fresh
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.list = [];
+        state.currentOrg = null;
+        state.isLoading = false;
+        state.error = null;
       });
   },
 });
