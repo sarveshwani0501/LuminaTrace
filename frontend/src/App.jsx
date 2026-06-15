@@ -13,7 +13,7 @@ import DocsPage from './pages/public/Docs';
 import Pricing from './pages/public/Pricing';
 import Integrations from './pages/public/Integrations';
 import Legal from './pages/public/Legal';
-import Changelog from './pages/public/ChangeLog';
+import Changelog from './pages/public/Changelog';
 import Dashboard from './pages/app/Dashboard';
 import Metrics from './pages/app/Metrics';
 import Logs from './pages/app/Logs';
