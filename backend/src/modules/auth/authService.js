@@ -18,6 +18,7 @@ import { hashText, compareHash } from "../../utils/hash.js";
 
 import crypto from "crypto";
 import redis from "../../config/redis.js";
+import logger from "../../utils/logger.js";
 import { transporter } from "../alerts/alertService.js";
 import config from "../../config/index.js";
 
@@ -264,12 +265,17 @@ async function sendOTPEmail(email, otp, type) {
     <p>This ${type === 'verification' ? 'verification code' : 'reset link'} expires in 15 minutes.</p>
     <p>If you didn't request this, please ignore this email.</p>
   `;
-  
 
-  await transporter.sendMail({
-    from: config.smtp.from,
-    to: email,
-    subject,
-    html: html
-  })
+  try {
+    await transporter.sendMail({
+      from: config.smtp.from,
+      to: email,
+      subject,
+      html: html
+    });
+    logger.info({ to: email, type }, 'Email sent successfully');
+  } catch (error) {
+    logger.error({ error: error.message, to: email, type }, 'Failed to send email');
+    throw error;
+  }
 }
