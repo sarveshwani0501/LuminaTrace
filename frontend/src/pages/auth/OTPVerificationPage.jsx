@@ -22,10 +22,20 @@ const OTPVerificationPage = () => {
   const [timeLeft, setTimeLeft] = useState(OTP_EXPIRY);
   const [resendMsg, setResendMsg] = useState(null);
   const inputRefs = Array.from({ length: OTP_LENGTH }, () => useRef(null));
+  const hasSentRef = useRef(false); // prevents double-send in React StrictMode
 
   useEffect(() => {
     if (!location.state?.email) navigate('/signup');
   }, [location, navigate]);
+
+  // Auto-send OTP when page first loads
+  useEffect(() => {
+    if (!email || email === 'your email' || hasSentRef.current) return;
+    hasSentRef.current = true;
+    authApi.sendVerificationEmail({ email }).catch((err) => {
+      setError(err.response?.data?.message || 'Failed to send verification code. Click Resend to try again.');
+    });
+  }, [email]);
 
   /* ── Expiry countdown ────────────────────────────────────── */
   useEffect(() => {
