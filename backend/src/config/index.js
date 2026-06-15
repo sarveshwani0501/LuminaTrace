@@ -113,7 +113,7 @@ const config = {
     port: getEnvInt("SMTP_PORT", 587),
     user: getEnvVar("SMTP_EMAIL", ""),
     pass: getEnvVar("SMTP_PASSWORD", ""),
-    from: getEnvVar("SMTP_EMAIL", ""),
+    from: getEnvVar("SMTP_FROM", getEnvVar("SMTP_EMAIL", "")),
   },
 
   app_url: {
