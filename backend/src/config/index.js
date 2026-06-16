@@ -99,7 +99,7 @@ const config = {
     origin: getEnvVar(
       "CORS_ORIGIN",
       "http://localhost:5173,http://localhost:3000,http://localhost:5174",
-    ).split(",").map((o) => o.trim()),
+    ).split(",").map((o) => o.trim().replace(/^['"]|['"]$/g, "")),
     credentials: getEnvVar("CORS_CREDENTIALS", "true") === "true",
   },
 
