@@ -114,6 +114,7 @@ const config = {
     user: getEnvVar("SMTP_EMAIL", ""),
     pass: getEnvVar("SMTP_PASSWORD", ""),
     from: getEnvVar("SMTP_FROM", getEnvVar("SMTP_EMAIL", "")),
+    resendApiKey: getEnvVar("RESEND_API_KEY", ""),
   },
 
   app_url: {

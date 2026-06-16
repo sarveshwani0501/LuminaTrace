@@ -1,19 +1,8 @@
 import * as alertRepo from "./alertRepository.js";
 import redis from "../../config/redis.js";
 import config from "../../config/index.js";
-import nodemailer from "nodemailer";
 import logger from "../../utils/logger.js";
-
-const transporter = nodemailer.createTransport({
-  host: config.smtp.host,
-  port: config.smtp.port,
-  secure: false,      // port 587 uses STARTTLS, not SSL
-  requireTLS: true,   // force TLS upgrade — required for Gmail App Password
-  auth: {
-    user: config.smtp.user,
-    pass: config.smtp.pass,
-  },
-});
+import { transporter } from "../../utils/emailService.js";
 
 export { transporter };
 
