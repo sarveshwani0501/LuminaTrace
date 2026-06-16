@@ -136,7 +136,7 @@ export async function getOrganizationInvites(organizationId) {
 
 export async function updateEmailVerificationStatus(email) {
   const res = await pool.query(
-    `UPDATE users SET email_verified = true WHERE email = $1`,
+    `UPDATE users SET is_email_verified = true WHERE email = $1`,
     [email],
   );
   return res.rows[0];
