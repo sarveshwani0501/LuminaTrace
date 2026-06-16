@@ -4,7 +4,7 @@ import config from "../config/index.js";
 async function corsPlugin(fastify, options) {
   await fastify.register(fastifyCors, {
     origin: config.cors.origin,
-    methods: ["GET", "POST", "DELETE", "PUT", "PATCH"],
+    methods: ["GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS"],
     credentials: config.cors.credentials,
   });
 }
