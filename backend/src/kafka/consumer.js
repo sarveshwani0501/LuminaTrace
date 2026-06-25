@@ -5,7 +5,9 @@ export default function createConsumer(groupId) {
     groupId,
     sessionTimeout: 30000,
     heartbeatInterval: 3000,
-    allowAutoTopicCreation: false,
+    // true: lets Aiven auto-create topics on first subscribe if the admin API
+    // creation was blocked by Aiven's policy (POLICY_VIOLATION on free plan).
+    allowAutoTopicCreation: true,
   });
 
   return consumer;
