@@ -334,7 +334,7 @@ export async function getLatestMetricsFromDB(projectId, serverId = null) {
 
 export async function dropOldMetricChunks() {
   const res = await pool.query(
-    `SELECT drop_chunk('metrics', INTERVAL '90 days')`,
+    `SELECT drop_chunks('metrics', INTERVAL '90 days')`,
   );
   return res;
 }

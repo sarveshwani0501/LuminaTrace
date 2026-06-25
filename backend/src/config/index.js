@@ -56,9 +56,12 @@ const config = {
     name: getEnvVar("DB_NAME", "luminatrace"),
     url: process.env.DATABASE_URL || null,
     pool: {
-      max: getEnvInt("DB_POOL_MAX", 20),
-      min: getEnvInt("DB_POOL_MIN", 2),
-      idle: getEnvInt("DB_POOL_IDLE", 10000),
+      // Neon free tier: max ~10 connections total. Keep headroom for migrations.
+      // min: 0 is critical — releases idle connections so Neon scales to zero
+      // and free compute hours are not burned while Render sleeps.
+      max: getEnvInt("DB_POOL_MAX", 5),
+      min: getEnvInt("DB_POOL_MIN", 0),
+      idle: getEnvInt("DB_POOL_IDLE", 5000),
     },
   },
 

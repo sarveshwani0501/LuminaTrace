@@ -85,7 +85,9 @@ async function handleCheckResult(endpoint, result) {
 async function runHealthChecks() {
   const lock = "job:health-check";
 
-  const acquired = await redis.set(lock, "locked", "NX", "EX", 25);
+  // Options-object syntax works on both @upstash/redis (production) and
+  // ioredis (local dev). Positional "NX","EX",25 is ioredis-only.
+  const acquired = await redis.set(lock, "locked", { nx: true, ex: 25 });
 
   if (!acquired) {
     logger.debug("Health check already running on another instance");

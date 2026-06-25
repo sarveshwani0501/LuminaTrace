@@ -1,0 +1,94 @@
+services:
+  - type: web
+    name: luminatrace-backend
+    runtime: node
+    # Root directory of the backend within the monorepo
+    rootDir: backend
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    # Render free tier requires port 10000
+    # Your server reads PORT from env var — set below.
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+
+      # ── Neon TimescaleDB ──────────────────────────────────────────────────
+      # Set DATABASE_URL in Render Dashboard → Environment (not here, for security)
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_POOL_MAX
+        value: "5"
+      - key: DB_POOL_MIN
+        value: "0"
+      - key: DB_POOL_IDLE
+        value: "5000"
+
+      # ── Upstash Redis ─────────────────────────────────────────────────────
+      # Set both in Render Dashboard → Environment
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+
+      # ── Aiven Kafka ───────────────────────────────────────────────────────
+      # Set all four in Render Dashboard → Environment
+      - key: KAFKA_BROKER
+        sync: false
+      - key: KAFKA_CLIENT_ID
+        value: luminatrace-backend
+      - key: KAFKA_GROUP_ID
+        value: luminatrace-consumers
+      - key: KAFKA_CA_CERT
+        sync: false
+      - key: KAFKA_CLIENT_CERT
+        sync: false
+      - key: KAFKA_CLIENT_KEY
+        sync: false
+
+      # ── Security ──────────────────────────────────────────────────────────
+      # Generate with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+      - key: JWT_SECRET
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: "7d"
+      - key: BCRYPT_ROUNDS
+        value: "10"
+
+      # ── CORS ──────────────────────────────────────────────────────────────
+      # Set to your exact Vercel URL — no trailing slash
+      - key: CORS_ORIGIN
+        sync: false
+      - key: CORS_CREDENTIALS
+        value: "true"
+      - key: FRONTEND_URL
+        sync: false
+
+      # ── Email (SMTP / Resend) ─────────────────────────────────────────────
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_EMAIL
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+
+      # ── App ───────────────────────────────────────────────────────────────
+      - key: LOG_LEVEL
+        value: info
+      - key: LOG_FORMAT
+        value: json
+      - key: ENABLE_METRICS
+        value: "true"
+      - key: ENABLE_TRACING
+        value: "true"
+      - key: ENABLE_ALERTS
+        value: "true"

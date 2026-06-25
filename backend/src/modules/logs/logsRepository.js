@@ -308,7 +308,7 @@ export async function getErrorRateOverTime(projectId, interval, from, to) {
 }
 
 export async function dropOldLogChunks() {
-  const res = await pool.query(`SELECT drop_chunk('logs', INTERVAL '90 days')`);
+  const res = await pool.query(`SELECT drop_chunks('logs', INTERVAL '90 days')`);
   return res;
 }
 

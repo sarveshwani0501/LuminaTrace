@@ -2,6 +2,8 @@
 .env
 .env.local
 .env.*.local
+# Production secrets file — contains live Render credentials, never commit
+render-env-vars.txt
 
 # Dependencies
 node_modules/

@@ -104,8 +104,10 @@ export async function buildApp() {
   fastify.addHook("onClose", async () => {
     fastify.log.info("Shutting down Kafka producer...");
     await disconnectProducer();
+    // redis.quit() is a no-op for @upstash/redis (HTTP/REST client — stateless).
+    // For local ioredis it cleanly closes the TCP connection.
     fastify.log.info("Closing Redis connection...");
-    await redis.quit();
+    await redis.quit?.();
   });
 
   // Register Routes

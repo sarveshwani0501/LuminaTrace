@@ -1,0 +1,37 @@
+name: Database Retention Cleanup
+
+on:
+  schedule:
+    # Runs every night at midnight UTC.
+    # This is the reliable replacement for the node-cron job inside Fastify,
+    # which cannot fire when Render has put the backend to sleep.
+    - cron: '0 0 * * *'
+  # Allow manual trigger from the GitHub Actions tab (useful before demos).
+  workflow_dispatch:
+
+jobs:
+  prune-chunks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Postgres Client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+
+      - name: Run TimescaleDB chunk pruning
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          echo "Pruning logs chunks older than 90 days..."
+          psql "$DATABASE_URL" -c "SELECT drop_chunks('logs', INTERVAL '90 days');"
+
+          echo "Pruning metrics chunks older than 90 days..."
+          psql "$DATABASE_URL" -c "SELECT drop_chunks('metrics', INTERVAL '90 days');"
+
+          echo "Pruning spans chunks older than 90 days..."
+          psql "$DATABASE_URL" -c "SELECT drop_chunks('spans', INTERVAL '90 days');"
+
+          echo "Pruning uptime_checks chunks older than 30 days..."
+          psql "$DATABASE_URL" -c "SELECT drop_chunks('uptime_checks', INTERVAL '30 days');"
+
+          echo "Retention cleanup complete."

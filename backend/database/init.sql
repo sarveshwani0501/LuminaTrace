@@ -1,4 +1,6 @@
-CREATE EXTENSION IF NOT EXISTS timescaledb;
+-- CASCADE is required on Neon — TimescaleDB depends on timescaledb_toolkit
+-- and Neon will error without it.
+CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- Users Table

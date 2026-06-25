@@ -7,6 +7,10 @@ const { Pool } = pkg;
 const poolConfig = config.database.url
   ? {
       connectionString: config.database.url,
+      // Neon (and other cloud Postgres providers) require SSL.
+      // rejectUnauthorized: false trusts the server cert without needing
+      // a local CA bundle — safe because Neon uses a globally-trusted CA.
+      ssl: { rejectUnauthorized: false },
       min: config.database.pool.min,
       max: config.database.pool.max,
       idleTimeoutMillis: config.database.pool.idle,
