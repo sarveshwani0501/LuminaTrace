@@ -1,6 +1,10 @@
 import { Kafka } from "kafkajs";
 import config from "./index.js";
 
+// Suppress the KafkaJS v2 partitioner warning — we accept the new default
+// and don't need the migration reminder on every startup.
+process.env.KAFKAJS_NO_PARTITIONER_WARNING = "1";
+
 // Aiven (production) requires SSL with mutual TLS (client cert + key + CA).
 // Certs are stored as env vars because Render does not support file uploads.
 // Local Docker Kafka runs plain PLAINTEXT — no SSL needed.
