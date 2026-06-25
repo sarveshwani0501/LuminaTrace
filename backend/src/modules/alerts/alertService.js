@@ -67,7 +67,7 @@ async function fireAlert(rule, value, serverId, serverName) {
     }
   }
 
-  const acquired = await redis.set(lockKey, "locked", "NX", "EX", 60);
+  const acquired = await redis.set(lockKey, "locked", { nx: true, ex: 60 });
 
   if (!acquired) {
     logger.debug(

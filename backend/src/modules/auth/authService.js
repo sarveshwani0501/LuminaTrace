@@ -154,7 +154,7 @@ export async function sendOTPForEmailVerification(email) {
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  await redis.set(`otp:verification:${email}`, otp, 'EX', 900);
+  await redis.set(`otp:verification:${email}`, otp, { ex: 900 });
 
   await sendOTPEmail(email, otp, 'verification');
 
@@ -198,7 +198,7 @@ export async function sendPasswordResetRequest(email) {
 
   const token = crypto.randomBytes(32).toString('hex');
   const url = `${config.app_url.frontend}/password-reset/verify?token=${token}`;
-  await redis.set(`reset:${token}`, email, 'EX', 900);
+  await redis.set(`reset:${token}`, email, { ex: 900 });
   await sendOTPEmail(email, url, 'reset');
   return { message: 'Password reset link sent successfully' };
 }
