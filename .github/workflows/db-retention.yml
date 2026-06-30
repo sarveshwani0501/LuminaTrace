@@ -18,9 +18,23 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y postgresql-client
 
+      - name: Validate secret is set
+        run: |
+          if [ -z "${{ secrets.NEON_DATABASE_URL }}" ]; then
+            echo "::error::NEON_DATABASE_URL secret is not set in GitHub repository secrets."
+            echo "Go to: GitHub → repo → Settings → Secrets → Actions → New secret"
+            echo "Name: NEON_DATABASE_URL"
+            echo "Value: your Neon connection string (same as DATABASE_URL on Render)"
+            exit 1
+          fi
+          echo "Secret is set — proceeding with pruning."
+
       - name: Run TimescaleDB chunk pruning
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          # Neon requires SSL — this env var ensures psql uses it
+          # even when the connection string already contains sslmode=require.
+          PGSSLMODE: require
         run: |
           echo "Pruning logs chunks older than 90 days..."
           psql "$DATABASE_URL" -c "SELECT drop_chunks('logs', INTERVAL '90 days');"
