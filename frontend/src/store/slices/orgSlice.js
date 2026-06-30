@@ -5,11 +5,7 @@ export const fetchOrganizations = createAsyncThunk(
   'org/fetchOrganizations',
   async (_, { rejectWithValue }) => {
     try {
-      // In LuminaTrace schema, a user only has one org (the one they own). Or potentially orgs they belong to.
-      // But looking at Auth route, login returns organizations array, but let's safely fetch if needed.
-      // Wait, `/organizations` endpoint isn't defined? Actually, the user can only fetch the org they are a member of?
-      // Since /auth/login returns the orgs, maybe we just use that action via extraReducers!
-      // But if we do need this, let's just make it a passthrough since there's no clear GET /organizations endpoint without an ID
+     
       return [] 
     } catch (error) {
       return rejectWithValue('Failed to fetch orgs');

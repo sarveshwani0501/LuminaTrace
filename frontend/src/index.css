@@ -14,7 +14,7 @@
 }
 
 @layer components {
-  /* ── Log Level Badges ─────────────────────────────────────── */
+  /* Log Level Badges */
   .badge-critical {
     @apply text-log-critical bg-log-criticalSubtle border border-log-critical/30 
            font-mono text-xs px-2 py-0.5 rounded-badge uppercase tracking-wider;
@@ -36,7 +36,7 @@
            font-mono text-xs px-2 py-0.5 rounded-badge uppercase tracking-wider;
   }
 
-  /* ── Surface Card ─────────────────────────────────────────── */
+  /* Surface Card */
   .card {
     @apply bg-surface border border-border rounded-card shadow-glass 
            transition-colors duration-base;
@@ -45,7 +45,7 @@
     @apply card hover:bg-surface-hover hover:border-border-light;
   }
 
-  /* ── Status Dot (server online/offline) ───────────────────── */
+  /* Status Dot (server online/offline) */
   .status-online {
     @apply w-2 h-2 rounded-pill bg-accent-success shadow-[0_0_6px_rgba(16,185,129,0.6)];
   }
@@ -57,7 +57,7 @@
   }
 }
 
-/* ── Scrollbar ────────────────────────────────────────────────── */
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -72,7 +72,7 @@
   @apply bg-primary;
 }
 
-/* ── Recharts Overrides ───────────────────────────────────────── */
+/* Recharts Overrides */
 .recharts-tooltip-cursor {
   fill: #1D273B !important;
 }

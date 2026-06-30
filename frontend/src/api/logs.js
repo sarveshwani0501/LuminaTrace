@@ -1,19 +1,15 @@
 import api from './client';
 
 export const logsApi = {
-  /**
-   * Primary paginated endpoint for historical logs.
-   */
+
   getLogs: (projectId, params) => {
-    // params can contain: timerange, level, serverId, limit, offset
+    
     return api.get('/logs', {
       params: { projectId, ...params }
     });
   },
 
-  /**
-   * Instantly fetches the latest 100 logs from Redis cache.
-   */
+  
   getRecentLogs: (projectId, limit = 100) => {
     return api.get(`/logs/recent?projectId=${projectId}&limit=${limit}`);
   },

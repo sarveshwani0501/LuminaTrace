@@ -14,9 +14,7 @@ import { logsApi }    from '../../api/logs';
 import { serversApi } from '../../api/servers';
 import { io }         from 'socket.io-client';
 
-/* ─────────────────────────────────────────────────────────────────
-   CHART TOOLTIP
-───────────────────────────────────────────────────────────────── */
+
 const ChartTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null;
   return (
@@ -28,9 +26,7 @@ const ChartTooltip = ({ active, payload }) => {
   );
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   LOG LEVEL BADGE
-───────────────────────────────────────────────────────────────── */
+
 const LogLevelBadge = ({ level }) => {
   const map = {
     INFO:     'text-log-info  bg-log-infoSubtle  border-log-info/20',
@@ -49,9 +45,7 @@ const LogLevelBadge = ({ level }) => {
   );
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   METHOD BADGE
-───────────────────────────────────────────────────────────────── */
+
 const MethodBadge = ({ method }) => {
   const map = {
     GET:    'text-accent-success bg-accent-success/10',
@@ -68,9 +62,7 @@ const MethodBadge = ({ method }) => {
   );
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   KPI CARD
-───────────────────────────────────────────────────────────────── */
+
 const KpiCard = ({ label, value, unit, sub, subColor = 'text-text-muted', icon: Icon, accentColor, barPct }) => (
   <div className="bg-surface border border-border rounded-card p-5 relative overflow-hidden group transition-all duration-base hover:border-border-light hover:shadow-elevated">
     {/* Header */}
@@ -108,9 +100,7 @@ const KpiCard = ({ label, value, unit, sub, subColor = 'text-text-muted', icon: 
   </div>
 );
 
-/* ─────────────────────────────────────────────────────────────────
-   EMPTY STATE
-───────────────────────────────────────────────────────────────── */
+
 const EmptyState = ({ icon: Icon, title, subtitle }) => (
   <div className="flex flex-col items-center justify-center h-full gap-3 py-10 text-center">
     <Icon className="w-8 h-8 text-border" />
@@ -121,9 +111,7 @@ const EmptyState = ({ icon: Icon, title, subtitle }) => (
   </div>
 );
 
-/* ─────────────────────────────────────────────────────────────────
-   DASHBOARD
-───────────────────────────────────────────────────────────────── */
+
 const Dashboard = () => {
   const { currentProject } = useSelector(state => state.project);
 
@@ -139,7 +127,7 @@ const Dashboard = () => {
   const [topRoutes, setTopRoutes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  /* ── Initial data fetch ───────────────────────────────────── */
+  /* Initial data fetch */
   useEffect(() => {
     if (!currentProject?.id) return;
 
@@ -164,8 +152,7 @@ const Dashboard = () => {
         if (topRoutesRes?.data?.routes) setTopRoutes(topRoutesRes.data.routes);
 
         const errorData  = errorTimeRes.data?.data || [];
-        // The generic timeseries API returns avg_value and data_points.
-        // For a count metric, sum = avg_value * data_points.
+        
         const totalErrors = errorData.reduce((acc, d) => {
           const avg = parseFloat(d.avg_value || 0);
           const points = parseInt(d.data_points || 1, 10);
@@ -187,7 +174,7 @@ const Dashboard = () => {
           activeServers: activeServers.length,
         });
 
-        /* ── Build chart data ── */
+        /* Build chart data  */
         const cpuData = cpuTimeRes.data?.data || [];
         const memData = memTimeRes.data?.data || [];
         const timeMap = {};
@@ -217,7 +204,7 @@ const Dashboard = () => {
     fetchInitialData();
   }, [currentProject?.id]);
 
-  /* ── Socket.io real-time ──────────────────────────────────── */
+  /* Socket.io real-time */
   useEffect(() => {
     if (!currentProject?.id) return;
 
@@ -271,7 +258,7 @@ const Dashboard = () => {
     return () => socket.disconnect();
   }, [currentProject?.id]);
 
-  /* ── No project selected ──────────────────────────────────── */
+  /*  No project selected  */
   if (!currentProject) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -280,7 +267,7 @@ const Dashboard = () => {
     );
   }
 
-  /* ── Helpers ──────────────────────────────────────────────── */
+  /*  Helpers */
   const errRate = (rate) => {
     const v = parseFloat(rate || 0);
     if (v === 0)  return 'text-accent-success bg-accent-success/10';
@@ -295,11 +282,11 @@ const Dashboard = () => {
     return '#EF4444';
   };
 
-  /* ─────────────────────────────────────────────────────────── */
+ 
   return (
     <div className="flex flex-col gap-5 w-full max-w-7xl mx-auto pb-10">
 
-      {/* ── KPI ROW ─────────────────────────────────────────── */}
+      {/* KPI ROW  */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
         <KpiCard
@@ -385,7 +372,7 @@ const Dashboard = () => {
 
       </div>
 
-      {/* ── INFRASTRUCTURE CHART ────────────────────────────── */}
+      {/* INFRASTRUCTURE CHART */}
       <div className="bg-surface border border-border rounded-card p-6 shadow-glass">
         <div className="flex items-start justify-between mb-5">
           <div>
@@ -473,10 +460,10 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* ── BOTTOM SPLIT ────────────────────────────────────── */}
+      {/* BOTTOM SPLIT */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-        {/* ── LIVE TERMINAL ─────────────────────────────────── */}
+        {/*  LIVE TERMINAL */}
         <div className="flex flex-col bg-[#0D1117] border border-border rounded-card overflow-hidden" style={{ height: '380px' }}>
 
           {/* Terminal chrome bar */}
@@ -547,7 +534,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* ── TOP API ROUTES ────────────────────────────────── */}
+        {/* TOP API ROUTES */}
         <div className="flex flex-col bg-surface border border-border rounded-card overflow-hidden" style={{ height: '380px' }}>
 
           <div className="flex items-start justify-between px-5 py-3.5 border-b border-border shrink-0">
@@ -574,7 +561,7 @@ const Dashboard = () => {
               topRoutes.map((route, i) => {
                 const errVal  = parseFloat(route.error_rate || 0);
                 const reqCount = route.request_count ?? route.count ?? 0;
-                /* bar width: normalized to max requests among all routes */
+               
                 const maxReqs = Math.max(...topRoutes.map(r => r.request_count ?? r.count ?? 0), 1);
                 const barW    = Math.round((reqCount / maxReqs) * 100);
 

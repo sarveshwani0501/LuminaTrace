@@ -4,9 +4,7 @@ import {
   HeartPulse, Copy, Check, BookOpen, Layers, Radio
 } from 'lucide-react';
 
-/* ─────────────────────────────────────────────────────────────────
-   NAV STRUCTURE
-───────────────────────────────────────────────────────────────── */
+
 const NAV_SECTIONS = [
   {
     label: 'Getting Started',
@@ -30,11 +28,7 @@ const NAV_SECTIONS = [
 
 const ALL_IDS = NAV_SECTIONS.flatMap(g => g.items.map(i => i.id));
 
-/* ─────────────────────────────────────────────────────────────────
-   SYNTAX HIGHLIGHTER
-   Transforms a plain code string into JSX with colored spans.
-   Token order matters — more specific patterns first.
-───────────────────────────────────────────────────────────────── */
+
 const TOKENS = [
   // Strings FIRST — captures "https://..." whole before // can be seen as a comment
   { re: /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g, cls: 'text-secondary'     }, // string → cyan
@@ -52,12 +46,7 @@ const TOKENS = [
   { re: /\b([a-zA-Z_][a-zA-Z0-9_]*)(?=\s*\()/g,                     cls: 'text-accent-success' }, // fn → green
 ];
 
-/**
- * Very small tokenizer — splits the string on regex matches and
- * interleaves plain text with colored <span> elements.
- * Runs each token pass over the remaining plain segments only,
- * so earlier (higher-priority) tokens are never re-processed.
- */
+
 const highlight = (raw) => {
   // We work with an array of { text, colored } segments
   let segments = [{ text: raw, colored: false }];
@@ -88,9 +77,7 @@ const highlight = (raw) => {
   );
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   CODE BLOCK
-───────────────────────────────────────────────────────────────── */
+
 const CodeBlock = ({ code, id, filename, copiedCode, onCopy }) => (
   <div className="rounded-card overflow-hidden bg-[#0D1117] border border-border shadow-glass my-5">
     {/* Chrome bar */}
@@ -126,18 +113,13 @@ const CodeBlock = ({ code, id, filename, copiedCode, onCopy }) => (
   </div>
 );
 
-/* ─────────────────────────────────────────────────────────────────
-   INLINE CODE  (used in intro text)
-───────────────────────────────────────────────────────────────── */
 const IC = ({ children }) => (
   <code className="bg-surface-active px-1.5 py-0.5 rounded-md text-primary font-mono text-[12px] border border-border">
     {children}
   </code>
 );
 
-/* ─────────────────────────────────────────────────────────────────
-   SECTIONS DATA
-───────────────────────────────────────────────────────────────── */
+
 const SECTIONS = [
   {
     id: 'installation',
@@ -312,9 +294,7 @@ process.on("SIGINT", async () => {
   },
 ];
 
-/* ─────────────────────────────────────────────────────────────────
-   DOCS PAGE
-───────────────────────────────────────────────────────────────── */
+
 const DocsPage = () => {
   const [copiedCode, setCopiedCode] = useState(null);
   const [activeId,   setActiveId]   = useState('installation');
@@ -347,7 +327,7 @@ const DocsPage = () => {
   return (
     <div className="flex w-full max-w-7xl mx-auto px-4 md:px-8 pt-12 pb-24 gap-0">
 
-      {/* ── Sidebar ─────────────────────────────────────────── */}
+      {/* Sidebar */}
       <aside className="w-56 shrink-0 hidden lg:flex flex-col pr-8 border-r border-border sticky top-20 h-[calc(100vh-80px)] overflow-y-auto">
         <p className="text-[10px] font-semibold text-text-muted uppercase tracking-widest mb-5">
           On this page
@@ -400,7 +380,7 @@ const DocsPage = () => {
         </div>
       </aside>
 
-      {/* ── Main ────────────────────────────────────────────── */}
+      {/* Main */}
       <main className="flex-1 lg:pl-12 min-w-0">
 
         {/* Page header */}

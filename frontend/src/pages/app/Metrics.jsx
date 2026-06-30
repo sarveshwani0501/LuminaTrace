@@ -13,9 +13,7 @@ import { io } from 'socket.io-client';
 import { metricsApi } from '../../api/metrics';
 import { serversApi } from '../../api/servers';
 
-/* ─────────────────────────────────────────────────────────────────
-   CONSTANTS  (stable references — defined once at module scope)
-───────────────────────────────────────────────────────────────── */
+
 const TIME_RANGES = [
   { value: '15m', label: 'Last 15 min' },
   { value: '1h',  label: 'Last 1 hour' },
@@ -33,9 +31,7 @@ const METRIC_COLORS = {
   connections: '#6366F1',   // indigo
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   PURE HELPERS  (no closure over state — stable across renders)
-───────────────────────────────────────────────────────────────── */
+
 
 /** Parse a timeseries API response into { time, val } chart points */
 const parseTimeseries = (data = []) =>
@@ -50,13 +46,7 @@ const parseTimeseries = (data = []) =>
     }))
     .filter(d => !isNaN(d.val));
 
-/**
- * Get the representative "current" value from a parsed series.
- * Walks backward from the end to find the last NON-ZERO point.
- * Prevents incomplete trailing buckets (val=0) from overwriting the
- * KPI stat when the chart clearly has real data — e.g. Throughput
- * showing 0.0 while the area chart shows a healthy curve.
- */
+
 const lastVal = (arr) => {
   if (!arr.length) return null;
   for (let i = arr.length - 1; i >= 0; i--) {
@@ -68,9 +58,7 @@ const lastVal = (arr) => {
   return parseFloat(arr[arr.length - 1].val).toFixed(1);
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   CHART TOOLTIP  (stable — defined at module scope, not inside render)
-───────────────────────────────────────────────────────────────── */
+
 const ChartTooltip = memo(({ active, payload, label, unit = '' }) => {
   if (!active || !payload?.length) return null;
   return (
@@ -84,9 +72,7 @@ const ChartTooltip = memo(({ active, payload, label, unit = '' }) => {
 });
 ChartTooltip.displayName = 'ChartTooltip';
 
-/* ─────────────────────────────────────────────────────────────────
-   EMPTY STATE (inside chart area)
-───────────────────────────────────────────────────────────────── */
+
 const ChartEmpty = memo(({ label }) => (
   <div className="w-full h-full flex flex-col items-center justify-center text-center px-3 gap-2">
     <BarChart2 className="w-5 h-5 text-border" />
@@ -95,16 +81,12 @@ const ChartEmpty = memo(({ label }) => (
 ));
 ChartEmpty.displayName = 'ChartEmpty';
 
-/* ─────────────────────────────────────────────────────────────────
-   METRIC CARD
-   Memoized — only re-renders when its own props change.
-   Chart type (visType) is passed as a prop, not read from closure.
-───────────────────────────────────────────────────────────────── */
+
 const MetricCard = memo(({
   title, value, unit, icon: Icon,
   color, data, visType, emptyLabel, gradientId,
 }) => {
-  /* Cursor style matching the card's accent color */
+ 
   const tooltipCursor = visType === 'bars'
     ? { fill: 'rgba(255,255,255,0.04)' }
     : { stroke: 'rgba(255,255,255,0.06)', strokeWidth: 1 };
@@ -197,9 +179,7 @@ const MetricCard = memo(({
 });
 MetricCard.displayName = 'MetricCard';
 
-/* ─────────────────────────────────────────────────────────────────
-   DROPDOWN  (generic reusable)
-───────────────────────────────────────────────────────────────── */
+
 const Dropdown = memo(({ trigger, children, isOpen, onToggle, align = 'right' }) => {
   const ref = useRef(null);
 
@@ -225,23 +205,21 @@ const Dropdown = memo(({ trigger, children, isOpen, onToggle, align = 'right' })
 });
 Dropdown.displayName = 'Dropdown';
 
-/* ─────────────────────────────────────────────────────────────────
-   METRICS PAGE
-───────────────────────────────────────────────────────────────── */
+
 const Metrics = () => {
   const { currentProject } = useSelector(state => state.project);
 
-  /* ── UI state (does NOT affect data fetching) ───────────────── */
+  /* UI state (does NOT affect data fetching)  */
   const [visType,             setVisType]             = useState('lines');
   const [timeRangeDropdown,   setTimeRangeDropdown]   = useState(false);
   const [serverDropdown,      setServerDropdown]      = useState(false);
   const [isConnected,         setIsConnected]         = useState(false);
 
-  /* ── Fetch-triggering state (changes here → new fetch) ──────── */
+  /* Fetch-triggering state (changes here → new fetch) */
   const [timeRange,         setTimeRange]         = useState('1h');
   const [selectedServerId,  setSelectedServerId]  = useState('');
 
-  /* ── Data state ─────────────────────────────────────────────── */
+  /* Data state */
   const [servers,         setServers]         = useState([]);
   const [isLoading,       setIsLoading]       = useState(false);
   const [latencyData,     setLatencyData]     = useState([]);
@@ -255,7 +233,7 @@ const Metrics = () => {
     throughput: '--', errorRate: '--', connections: '--',
   });
 
-  /* ── Fetch — only depends on real data params ───────────────── */
+  /* Fetch — only depends on real data params */
   const fetchAll = useCallback(async () => {
     if (!currentProject?.id) return;
     setIsLoading(true);
@@ -327,13 +305,12 @@ const Metrics = () => {
     } finally {
       setIsLoading(false);
     }
-  /* NOTE: isTimeDropdownOpen / serverDropdown NOT in deps — closing them
-     does not need to trigger a refetch, eliminating the loop risk. */
+ 
   }, [currentProject?.id, timeRange, selectedServerId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  /* ── Socket.io — live metric updates ────────────────────────── */
+  /* Socket.io — live metric updates */
   useEffect(() => {
     if (!currentProject?.id) return;
 
@@ -385,17 +362,14 @@ const Metrics = () => {
     return () => socket.disconnect();
   }, [currentProject?.id]);
 
-  /* ── Derived ────────────────────────────────────────────────── */
+  /* Derived */
   const activeTimeRange = TIME_RANGES.find(t => t.value === timeRange);
   const selectedServer  = servers.find(s => s.id === selectedServerId);
 
   const handleTimeRangeToggle  = useCallback((v) => setTimeRangeDropdown(v), []);
   const handleServerToggle     = useCallback((v) => setServerDropdown(v), []);
 
-  /* ── Metric card definitions ─────────────────────────────────
-     Defined inside component but only reconstructed when stats change.
-     Chart data arrays are passed as stable refs from state.
-  ────────────────────────────────────────────────────────────── */
+  /* Metric card definitions */
   const METRIC_CARDS = [
     {
       key:         'latency',
@@ -465,11 +439,11 @@ const Metrics = () => {
     },
   ];
 
-  /* ─────────────────────────────────────────────────────────── */
+  
   return (
     <div className="w-full flex gap-5 h-[calc(100vh-80px)] overflow-hidden">
 
-      {/* ── MAIN AREA ──────────────────────────────────────── */}
+      {/* MAIN AREA */}
       <div className="flex-1 flex flex-col gap-5 min-w-0 overflow-y-auto pb-10">
 
         {/* Page header */}
@@ -546,7 +520,7 @@ const Metrics = () => {
         </div>
       </div>
 
-      {/* ── SIDEBAR ────────────────────────────────────────── */}
+      {/* SIDEBAR*/}
       <div className="w-[260px] shrink-0 bg-background border border-border rounded-card flex flex-col overflow-hidden shadow-glass">
 
         {/* Sidebar header */}
@@ -557,7 +531,7 @@ const Metrics = () => {
 
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5">
 
-          {/* ── Node targeting ─────────────────────────────── */}
+          {/* Node targeting */}
           <div>
             <p className="text-[9px] font-mono font-medium uppercase tracking-widest text-text-muted mb-2.5">
               Node targeting
@@ -648,7 +622,7 @@ const Metrics = () => {
 
           <div className="h-px bg-border" />
 
-          {/* ── Visualization type ──────────────────────────── */}
+          {/* Visualization type */}
           <div>
             <p className="text-[9px] font-mono font-medium uppercase tracking-widest text-text-muted mb-2.5">
               Visualization
@@ -692,7 +666,7 @@ const Metrics = () => {
 
           <div className="h-px bg-border" />
 
-          {/* ── Stream status ───────────────────────────────── */}
+          {/* Stream status */}
           <div>
             <p className="text-[9px] font-mono font-medium uppercase tracking-widest text-text-muted mb-2.5">
               Stream status

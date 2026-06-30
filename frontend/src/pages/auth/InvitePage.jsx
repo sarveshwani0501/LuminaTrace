@@ -8,7 +8,7 @@ import Input from '../../components/ui/Input';
 import { Card, CardContent } from '../../components/ui/Card';
 import { invitesApi } from '../../api/invites';
 
-/* ── Loading skeleton ───────────────────────────────────────────── */
+/* Loading skeleton */
 const LoadingView = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
     <div className="flex flex-col items-center gap-4">
@@ -18,7 +18,7 @@ const LoadingView = () => (
   </div>
 );
 
-/* ── Invalid invite fallback ────────────────────────────────────── */
+/* Invalid invite fallback */
 const InvalidInviteView = ({ message }) => (
   <div className="min-h-screen flex flex-col items-center justify-center py-16 px-4 bg-background">
     <div className="w-full max-w-md">
@@ -40,7 +40,7 @@ const InvalidInviteView = ({ message }) => (
   </div>
 );
 
-/* ── Page ───────────────────────────────────────────────────────── */
+/* Page */
 const InvitePage = () => {
   const { token }  = useParams();
   const navigate   = useNavigate();
@@ -159,7 +159,7 @@ const InvitePage = () => {
                   />
 
                   {inviteData.existingUser ? (
-                    /* ── Existing user ── */
+                    /* Existing user */
                     <>
                       <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/6 border border-secondary/20">
                         <CheckCircle2 className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
@@ -181,7 +181,7 @@ const InvitePage = () => {
                       />
                     </>
                   ) : (
-                    /* ── New user ── */
+                    /* New user */
                     <>
                       <Input
                         label="Full name"
@@ -230,7 +230,7 @@ const InvitePage = () => {
                 </p>
               </>
             ) : (
-              /* ── Success state ─────────────────────────────── */
+              /* Success state */
               <div className="flex flex-col items-center gap-5 text-center py-4">
                 <div className="w-14 h-14 rounded-full bg-accent-success/10 border border-accent-success/25 flex items-center justify-center">
                   {/* Steady icon — no bounce */}

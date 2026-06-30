@@ -28,7 +28,7 @@ const OTPVerificationPage = () => {
     if (!location.state?.email) navigate('/signup');
   }, [location, navigate]);
 
-  // Auto-send OTP when page first loads
+  
   useEffect(() => {
     if (!email || email === 'your email' || hasSentRef.current) return;
     hasSentRef.current = true;
@@ -37,7 +37,7 @@ const OTPVerificationPage = () => {
     });
   }, [email]);
 
-  /* ── Expiry countdown ────────────────────────────────────── */
+  /* Expiry countdown */
   useEffect(() => {
     if (timeLeft <= 0) return;
     const t = setInterval(() => setTimeLeft(s => s - 1), 1000);
@@ -46,7 +46,7 @@ const OTPVerificationPage = () => {
 
   const formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
-  /* ── OTP input handlers ──────────────────────────────────── */
+  /* OTP input handlers */
   const handleChange = (index, e) => {
     const val = e.target.value;
     if (isNaN(val)) return;
@@ -74,7 +74,7 @@ const OTPVerificationPage = () => {
     inputRefs[focusIdx]?.current?.focus();
   };
 
-  /* ── Submit ──────────────────────────────────────────────── */
+  /* Submit */
   const handleSubmit = async (e) => {
     e.preventDefault();
     const otpValue = otp.join('');
@@ -94,7 +94,7 @@ const OTPVerificationPage = () => {
     }
   };
 
-  /* ── Resend ──────────────────────────────────────────────── */
+  /* Resend */
   const handleResend = async () => {
     setResendMsg(null);
     setError(null);

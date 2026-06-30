@@ -15,7 +15,7 @@ const PrivateLayout = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [hasFetched,      setHasFetched]      = useState(false);
 
-  // Auth guard — redirect to login immediately if not authenticated
+  
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
@@ -52,7 +52,7 @@ const PrivateLayout = () => {
       {/* Content area */}
       <div className="flex-1 flex flex-col h-screen overflow-y-auto relative min-w-0">
 
-        {/* Subtle ambient glow at top of content area */}
+        
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-40 pointer-events-none -z-10"
           style={{ background: 'radial-gradient(ellipse at top, rgba(124,58,237,0.06) 0%, transparent 70%)' }}
@@ -63,7 +63,7 @@ const PrivateLayout = () => {
         </main>
       </div>
 
-      {/* Modal mounted at layout level — never unmounted by content changes */}
+      {/* Modal mounted at layout level*/}
       {showCreateModal && (
         <CreateProjectModal onClose={() => setShowCreateModal(false)} />
       )}

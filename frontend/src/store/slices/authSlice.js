@@ -7,7 +7,7 @@ export const loginUser = createAsyncThunk(
   async (credentials, { rejectWithValue }) => {
     try {
       const response = await authApi.login(credentials);
-      return response.data; // Should return { user: ... } based on Fastify setup
+      return response.data; 
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || error.response?.data?.error || 'Login failed');
     }
@@ -94,7 +94,7 @@ const authSlice = createSlice({
       })
       .addCase(signupUser.fulfilled, (state) => {
         state.isLoading = false;
-        // Typically does not authenticate immediately without OTP, depending on schema, so we do nothing here except end loading
+        
       })
       .addCase(signupUser.rejected, (state, action) => {
         state.isLoading = false;

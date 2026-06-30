@@ -10,8 +10,7 @@ const rootReducer = combineReducers({
   project: projectReducer
 });
 
-// Custom Storage Wrapper mapping directly to Window's built-in localStorage
-// This violently forces Vite to bundle it correctly and avoids the "storage.getItem is not a function" CommonJS bug.
+
 const customStorage = {
   getItem: (key) => Promise.resolve(window.localStorage.getItem(key)),
   setItem: (key, item) => {
@@ -27,7 +26,7 @@ const customStorage = {
 const persistConfig = {
   key: 'root',
   storage: customStorage,
-  whitelist: ['auth', 'org', 'project'] // Persist full global tree for hydration
+  whitelist: ['auth', 'org', 'project']
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -36,7 +35,7 @@ const store = configureStore({
   reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: false, // Disabling serializability checks against persist hooks
+      serializableCheck: false, 
     }),
 });
 

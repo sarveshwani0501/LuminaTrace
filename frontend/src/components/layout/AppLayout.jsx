@@ -6,9 +6,7 @@ import {
   Bell, Server, Settings, ChevronDown
 } from 'lucide-react';
 
-/* ─────────────────────────────────────────────────────────────────
-   NAV ITEMS
-───────────────────────────────────────────────────────────────── */
+
 const NAV_ITEMS = [
   { name: 'Dashboard', icon: LayoutDashboard, path: '/app/dashboard' },
   { name: 'Logs',      icon: Terminal,        path: '/app/logs'      },
@@ -18,9 +16,7 @@ const NAV_ITEMS = [
   { name: 'Settings',  icon: Settings,        path: '/app/settings'  },
 ];
 
-/* ─────────────────────────────────────────────────────────────────
-   USER AVATAR  (initials from name or email)
-───────────────────────────────────────────────────────────────── */
+
 const UserAvatar = ({ name, email }) => {
   const initials = name
     ? name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -32,11 +28,7 @@ const UserAvatar = ({ name, email }) => {
   );
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   SIDEBAR
-   Accepts onCreateProject from PrivateLayout so the "+ New Project"
-   trigger in the header can open the modal.
-───────────────────────────────────────────────────────────────── */
+
 export const Sidebar = ({ onCreateProject }) => {
   const { user }           = useSelector(state => state.auth);
   const { currentProject } = useSelector(state => state.project);
@@ -122,9 +114,7 @@ export const Sidebar = ({ onCreateProject }) => {
   );
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   HEADER  (sticky top bar inside private layout)
-───────────────────────────────────────────────────────────────── */
+
 const Header = ({ onCreateProject }) => {
   const { currentProject } = useSelector(state => state.project);
   const { currentOrg }     = useSelector(state => state.org);
@@ -159,11 +149,7 @@ const Header = ({ onCreateProject }) => {
   );
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   APP LAYOUT  (used by AppLayout.jsx route wrapper if needed)
-   NOTE: PrivateLayout is the primary private wrapper.
-   This component is kept for any standalone usage.
-───────────────────────────────────────────────────────────────── */
+
 const AppLayout = () => (
   <div className="flex h-screen overflow-hidden bg-background">
     <Sidebar />

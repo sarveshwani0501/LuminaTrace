@@ -60,7 +60,7 @@ const ForgotPasswordPage = () => {
           <CardContent className="pt-8 pb-6 px-7 flex flex-col gap-6">
 
             {!isSent ? (
-              /* ── Request state ─────────────────────────────── */
+              /* Request state */
               <>
                 <div className="flex flex-col items-center gap-2 text-center">
                   <div className="w-11 h-11 rounded-xl bg-accent-warning/10 border border-accent-warning/25 flex items-center justify-center mb-1">
@@ -115,7 +115,7 @@ const ForgotPasswordPage = () => {
                 </div>
               </>
             ) : (
-              /* ── Sent / success state ──────────────────────── */
+              /* Sent / success state */
               <div className="flex flex-col items-center gap-4 text-center py-2">
                 <div className="w-14 h-14 rounded-full bg-accent-success/10 border border-accent-success/25 flex items-center justify-center">
                   {/* Different icon from request state — checkmark on envelope */}

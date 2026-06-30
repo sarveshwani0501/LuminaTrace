@@ -1,16 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ExternalLink } from 'lucide-react';
 
-/* ─────────────────────────────────────────────────────────────────
-   CHANGELOG DATA
-   
-   Rules for adding entries:
-   - Describe what the USER can now do — not how you built it
-   - No internal tech names (Kafka, Redis, TimescaleDB, Socket.io)
-   - One entry per release. Prepend new entries at the top.
-   - tags: 'new' | 'improved' | 'fixed' | 'sdk' | 'breaking'
-   - type: 'major' (filled dot) | 'minor' (hollow dot)
-───────────────────────────────────────────────────────────────── */
+
 const ENTRIES = [
   {
     version:   'v1.0.0',
@@ -57,9 +48,6 @@ const ENTRIES = [
     }
 ];
 
-/* ─────────────────────────────────────────────────────────────────
-   TAG CONFIG
-───────────────────────────────────────────────────────────────── */
 const TAG_CONFIG = {
   new:      { label: 'New',      cls: 'bg-primary/8        text-primary         border-primary/20'        },
   improved: { label: 'Improved', cls: 'bg-secondary/8      text-secondary       border-secondary/20'      },
@@ -78,9 +66,7 @@ const CHANGE_DOT = {
 
 const FILTERS = ['all', 'new', 'improved', 'fixed', 'sdk', 'breaking'];
 
-/* ─────────────────────────────────────────────────────────────────
-   TAG BADGE
-───────────────────────────────────────────────────────────────── */
+
 const Tag = ({ type }) => {
   const cfg = TAG_CONFIG[type];
   if (!cfg) return null;
@@ -94,9 +80,7 @@ const Tag = ({ type }) => {
   );
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   CHANGELOG PAGE
-───────────────────────────────────────────────────────────────── */
+
 const Changelog = () => {
   const [activeFilter, setActiveFilter] = useState('all');
 
@@ -110,7 +94,7 @@ const Changelog = () => {
     <div className="min-h-screen bg-background text-text-primary">
       <div className="max-w-4xl mx-auto px-6 py-20">
 
-        {/* ── Page header ───────────────────────────────────── */}
+        {/* Page header */}
         <div className="text-center mb-14">
           <div className="inline-flex items-center gap-2 mb-4">
             <span className="w-1.5 h-1.5 rounded-full bg-primary" />
@@ -128,7 +112,7 @@ const Changelog = () => {
           </p>
         </div>
 
-        {/* ── Filter pills ──────────────────────────────────── */}
+        {/* Filter pills */}
         <div className="flex items-center justify-center gap-2 flex-wrap mb-14">
           {FILTERS.map(f => (
             <button
@@ -146,7 +130,7 @@ const Changelog = () => {
           ))}
         </div>
 
-        {/* ── Timeline ──────────────────────────────────────── */}
+        {/* Timeline */}
         {filtered.length === 0 ? (
           <div className="text-center py-20 text-text-muted text-sm font-mono">
             No entries match this filter yet.
@@ -240,7 +224,7 @@ const Changelog = () => {
           </div>
         )}
 
-        {/* ── GitHub CTA ────────────────────────────────────── */}
+        {/* GitHub CTA */}
         <div className="mt-16 bg-surface border border-border rounded-card p-7
           flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
           <div>

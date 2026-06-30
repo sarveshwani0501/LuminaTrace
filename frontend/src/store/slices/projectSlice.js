@@ -8,7 +8,7 @@ export const fetchProjects = createAsyncThunk(
     try {
       if (!orgId) throw new Error("Organization ID is required");
       const response = await projectApi.getProjects(orgId);
-      // Backend returns raw array directly, not wrapped in { projects: [] }
+      
       return Array.isArray(response.data) ? response.data : (response.data.projects || []);
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Failed to fetch projects');
@@ -90,9 +90,7 @@ const projectSlice = createSlice({
       .addCase(createProject.fulfilled, (state, action) => {
         state.isLoading = false;
         state.list.push(action.payload);
-        // NOTE: Do NOT auto-select the project here.
-        // The CreateProjectModal controls this — it shows the one-time API key first,
-        // then dispatches setCurrentProject only after the user confirms they've saved it.
+        
       })
       .addCase(createProject.rejected, (state, action) => {
         state.isLoading = false;

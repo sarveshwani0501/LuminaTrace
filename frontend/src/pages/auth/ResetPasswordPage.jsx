@@ -6,7 +6,7 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { Card, CardContent } from '../../components/ui/Card';
 
-/* ── Password strength (reused from SignupPage) ─────────────────── */
+
 const getStrength = (pw) => {
   if (!pw) return 0;
   let s = 0;
@@ -36,7 +36,7 @@ const PasswordStrength = ({ password }) => {
   );
 };
 
-/* ── Invalid token fallback ─────────────────────────────────────── */
+/* Invalid token fallback */
 const InvalidTokenView = () => (
   <div className="min-h-screen flex flex-col items-center justify-center py-16 px-4 bg-background">
     <div className="w-full max-w-md">
@@ -62,7 +62,7 @@ const InvalidTokenView = () => (
   </div>
 );
 
-/* ── Page ───────────────────────────────────────────────────────── */
+/* Page */
 const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
   const token          = searchParams.get('token');
@@ -187,7 +187,7 @@ const ResetPasswordPage = () => {
                 </form>
               </>
             ) : (
-              /* ── Success state ─────────────────────────────── */
+              /* Success state */
               <div className="flex flex-col items-center gap-5 text-center py-2">
                 <div className="w-14 h-14 rounded-full bg-accent-success/10 border border-accent-success/25 flex items-center justify-center">
                   <ShieldCheck className="w-7 h-7 text-accent-success" />

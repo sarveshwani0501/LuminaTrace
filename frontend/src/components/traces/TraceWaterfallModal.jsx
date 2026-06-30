@@ -6,11 +6,8 @@ import {
 } from 'lucide-react';
 import { spansApi } from '../../api/spans';
 
-/* ─────────────────────────────────────────────────────────────────
-   MODULE-SCOPE PURE HELPERS  (stable — never recreated on render)
-───────────────────────────────────────────────────────────────── */
 
-/** Pick an icon based on the span's service name */
+
 const getServiceIcon = (service = '') => {
   const s = service.toLowerCase();
   if (s.includes('gateway'))                    return <Layers  className="w-3.5 h-3.5" />;
@@ -20,7 +17,7 @@ const getServiceIcon = (service = '') => {
   return                                               <Server  className="w-3.5 h-3.5" />;
 };
 
-/** Gantt bar color + glow using theme tokens */
+
 const getBarStyle = (level = '') => {
   switch (level?.toUpperCase()) {
     case 'ERROR':    return { background: '#EF4444', boxShadow: '0 0 8px rgba(239,68,68,0.45)' };
@@ -31,23 +28,19 @@ const getBarStyle = (level = '') => {
   }
 };
 
-/** Left-offset percentage for a span bar */
+
 const calcLeft  = (offset, total) => `${(Number(offset) / total) * 100}%`;
-/** Width percentage for a span bar — minimum 0.5% so it's always visible */
+
 const calcWidth = (dur,    total) => `${Math.max((Number(dur) / total) * 100, 0.5)}%`;
 
-/* ─────────────────────────────────────────────────────────────────
-   LOADING / ERROR / EMPTY states
-───────────────────────────────────────────────────────────────── */
+
 const CenteredState = ({ children }) => (
   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/80">
     {children}
   </div>
 );
 
-/* ─────────────────────────────────────────────────────────────────
-   SPAN ROW  (memoised — only re-renders when hovered state changes)
-───────────────────────────────────────────────────────────────── */
+
 const SpanRow = memo(({ span, totalDuration, isHovered, isDimmed, onHover, onLeave }) => {
   const barStyle  = getBarStyle(span.level);
   const leftPct   = calcLeft(span.offset,   totalDuration);
@@ -63,7 +56,7 @@ const SpanRow = memo(({ span, totalDuration, isHovered, isDimmed, onHover, onLea
         ${isHovered  ? 'bg-surface-hover' : 'hover:bg-surface/40'}
       `}
     >
-      {/* ── Left panel: tree label ── */}
+      {/* Left panel: tree label */}
       <div className="w-[38%] flex items-center gap-2 px-4 py-2.5 border-r border-border/40 min-w-0">
         <div
           style={{ marginLeft: `${span.depth * 18}px` }}
@@ -103,7 +96,7 @@ const SpanRow = memo(({ span, totalDuration, isHovered, isDimmed, onHover, onLea
         </div>
       </div>
 
-      {/* ── Right panel: Gantt bar ── */}
+      {/* Right panel: Gantt bar */}
       <div className="w-[62%] relative flex items-center px-2 py-2.5" style={{ minHeight: '40px' }}>
         {/* The bar */}
         <div
@@ -132,9 +125,7 @@ const SpanRow = memo(({ span, totalDuration, isHovered, isDimmed, onHover, onLea
 });
 SpanRow.displayName = 'SpanRow';
 
-/* ─────────────────────────────────────────────────────────────────
-   TRACE WATERFALL MODAL
-───────────────────────────────────────────────────────────────── */
+
 const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
   const [spans,         setSpans]         = useState([]);
   const [totalDuration, setTotalDuration] = useState(1000);
@@ -142,7 +133,7 @@ const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
   const [loading,       setLoading]       = useState(false);
   const [error,         setError]         = useState(null);
 
-  /* ── Fetch spans ─────────────────────────────────────────── */
+  /* Fetch spans  */
   useEffect(() => {
     if (!traceId || !projectId) return;
     setLoading(true);
@@ -163,7 +154,7 @@ const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
       .finally(() => setLoading(false));
   }, [traceId, projectId]);
 
-  /* ── Close on Escape key ─────────────────────────────────── */
+  /* Close on Escape key  */
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
@@ -172,10 +163,10 @@ const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
 
   if (!traceId) return null;
 
-  /* ── Axis tick values ───────────────────────────────────── */
+  /* Axis tick values  */
   const ticks = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(totalDuration * f));
 
-  /* ─────────────────────────────────────────────────────────── */
+ 
   const modal = (
     <div
       className="fixed inset-0 z-[99999] flex items-center justify-center p-5 bg-black/70 backdrop-blur-sm"
@@ -187,7 +178,7 @@ const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
         onClick={e => e.stopPropagation()}
       >
 
-        {/* ── Modal header ──────────────────────────────────── */}
+        {/*  Modal header */}
         <div className="flex items-start justify-between px-6 py-4 border-b border-border bg-surface shrink-0">
           <div>
             <div className="flex items-center gap-3 mb-1">
@@ -232,7 +223,7 @@ const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
           </div>
         </div>
 
-        {/* ── Axis header ───────────────────────────────────── */}
+        {/*  Axis header  */}
         <div className="flex shrink-0 px-4 py-2 bg-background/50 border-b border-border text-[9px] font-mono text-text-muted select-none">
           <div className="w-[38%] pl-2">Execution tree</div>
           <div className="w-[62%] relative pr-2 h-4">
@@ -250,10 +241,10 @@ const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
           </div>
         </div>
 
-        {/* ── Timeline body ─────────────────────────────────── */}
+        {/*  Timeline body */}
         <div className="flex-1 min-h-0 overflow-y-auto relative bg-[#0A0C10]">
 
-          {/* Grid lines (overlay, pointer-events:none) */}
+          {/* Grid lines */}
           {!loading && spans.length > 0 && (
             <div className="absolute inset-y-0 right-0 w-[62%] pointer-events-none">
               {[0, 25, 50, 75].map(pct => (
@@ -305,7 +296,7 @@ const TraceWaterfallModal = ({ traceId, projectId, onClose }) => {
           ))}
         </div>
 
-        {/* ── Bottom inspector ──────────────────────────────── */}
+        {/*  Bottom inspector  */}
         <div className="shrink-0 h-20 border-t border-border bg-surface px-6 flex items-center justify-between gap-6">
           {hoveredSpan ? (
             <>
