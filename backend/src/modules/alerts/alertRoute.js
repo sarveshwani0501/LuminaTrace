@@ -30,8 +30,7 @@ export default function alertRoute(fastify, options, done) {
     alertController.listAllRules,
   );
 
-  // IMPORTANT: /alerts/events MUST be registered before /alerts/:id
-  // otherwise Fastify matches the literal string 'events' as the :id param
+  
   fastify.get(
     "/alerts/events",
     {
@@ -77,7 +76,7 @@ export default function alertRoute(fastify, options, done) {
     alertController.toggleRuleActivity,
   );
 
-  // (events route moved above :id — see above)
+
 
   done();
 }

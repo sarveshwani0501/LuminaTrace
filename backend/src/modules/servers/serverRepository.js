@@ -35,18 +35,7 @@ export async function getServerById(serverId, projectId) {
   return res.rows[0];
 }
 
-// CREATE TABLE servers (
-//     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-//     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-//     name VARCHAR(100) NOT NULL,
-//     hostname VARCHAR(255),
-//     ip_address INET,
-//     environment VARCHAR(20) DEFAULT 'production',
-//     tags JSONB DEFAULT '{}',
-//     status VARCHAR(20) DEFAULT 'unknown',
-//     last_seen_at TIMESTAMPTZ,
-//     created_at TIMESTAMPTZ DEFAULT NOW()
-// );
+
 
 export async function createServer({ projectId, hostname }) {
   const res = await pool.query(

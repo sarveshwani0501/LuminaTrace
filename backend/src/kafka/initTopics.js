@@ -22,8 +22,7 @@ export async function initializeTopics() {
 
     const topicsToCreate = missingTopics.map((topic) => ({
       topic,
-      // Aiven free plan actual limits (confirmed from console):
-      // partitions: 1, replication factor: 2, min ISR: 1
+      
       numPartitions: 1,
       replicationFactor: 2,
     }));
@@ -35,18 +34,7 @@ export async function initializeTopics() {
         "Kafka topics created successfully",
       );
     } catch (createError) {
-      // ── POLICY_VIOLATION handling ──────────────────────────────────────────
-      // Aiven free plan blocks programmatic topic creation via the admin API.
-      // This is NOT a fatal error — the app can still start. Topics must be
-      // created manually in the Aiven console.
-      //
-      // HOW TO FIX: Go to Aiven → your Kafka service → Topics tab → create:
-      //   • luminatrace.logs     (partitions: 3, replication: 3)
-      //   • luminatrace.metrics  (partitions: 3, replication: 3)
-      //   • luminatrace.spans    (partitions: 3, replication: 3)
-      //
-      // Once created, the app will skip this block on next startup.
-      // ──────────────────────────────────────────────────────────────────────
+      
       logger.warn(
         {
           error: createError.message,

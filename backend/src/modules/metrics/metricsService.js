@@ -1,7 +1,4 @@
-// GET  /metrics/timeseries?projectId=X&metricName=cpu_usage&timerange=6h&serverId=Y (optional)
-// GET  /metrics/latest?projectId=X&serverId=Y (optional)
 
-// GET /metrics/timeseries/p99?projectId=X&timerange=6h&serverId=Y (optional)
 
 import {
   getMetricTimeSeries,

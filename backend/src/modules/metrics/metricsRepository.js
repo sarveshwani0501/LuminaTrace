@@ -1,14 +1,6 @@
 import { pool } from "../../config/database.js";
 import { getHash } from "../../config/redis.js";
-// CREATE TABLE metrics (
-//     time TIMESTAMPTZ NOT NULL,
-//     project_id UUID NOT NULL REFERENCES projects(id),
-//     server_id UUID REFERENCES servers(id),
-//     metric_name VARCHAR(50) NOT NULL,
-//     value DOUBLE PRECISION NOT NULL,
-//     unit VARCHAR(20),
-//     tags JSONB DEFAULT '{}'
-// );
+
 
 export async function insertMetric(metric) {
   await pool.query(
@@ -58,8 +50,7 @@ export async function insertMetricBatch(metrics) {
   }
 }
 
-// GET  /metrics/timeseries?projectId=X&metricName=cpu_usage&timerange=6h&serverId=Y (optional)
-// GET  /metrics/latest?projectId=X&serverId=Y (optional)
+
 
 export async function getMetricTimeSeries(
   projectId,

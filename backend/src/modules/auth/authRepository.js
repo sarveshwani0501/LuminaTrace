@@ -1,6 +1,6 @@
 import { pool } from "../../config/database.js";
 
-// ─── USER FUNCTIONS ───────────────────────────────────────────
+
 
 export async function getUserById(userId) {
   const res = await pool.query(
@@ -33,7 +33,7 @@ export async function updateLastLogin(userId) {
   ]);
 }
 
-// ─── ORGANIZATION FUNCTIONS ───────────────────────────────────
+
 
 export async function createOrganization({ name, slug }) {
   const res = await pool.query(
@@ -63,7 +63,7 @@ export async function getUserOrganizations(userId) {
   return res.rows;
 }
 
-// ─── MEMBERSHIP FUNCTIONS ─────────────────────────────────────
+
 
 export async function addMember({ userId, organizationId, role }) {
   const res = await pool.query(
@@ -75,7 +75,7 @@ export async function addMember({ userId, organizationId, role }) {
   return res.rows[0];
 }
 
-// ─── INVITE FUNCTIONS ─────────────────────────────────────────
+
 
 export async function createInvite({
   organizationId,
@@ -112,7 +112,7 @@ export async function getInviteByToken(token) {
 }
 
 export async function markInviteAccepted(token, client) {
-  // Accepts an optional client for use inside transactions
+ 
   const db = client || pool;
   await db.query(
     `UPDATE org_invites SET accepted_at = NOW() WHERE token = $1`,

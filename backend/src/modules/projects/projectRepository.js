@@ -1,17 +1,3 @@
-// users --> id , full_name , email , password_hash , is_email_verified , created_at, last_login_at
-// organizations --> id , name, slug , plan , created_at
-// organizations_members --> id , user_id , organization_id , role , joined_at
-// org_invites -->  id , organization_id , email , token , role , invited_by , accepted_at , expires_at , created_at
-// projects --> id, organization_id, name, slug, description, api_key, api_key_preview, retention_days, created_at, created_by
-
-// GET    /organizations/:orgId/projects         → list all projects -- repo
-// POST   /organizations/:orgId/projects         → create a project
-// GET    /organizations/:orgId/projects/:projId → get project details + api_key
-// PUT    /organizations/:orgId/projects/:projId → update project
-// DELETE /organizations/:orgId/projects/:projId → delete project
-
-// POST /organizations/:orgId/projects/:projId/rotate-key
-
 import { pool } from "../../config/database.js";
 
 export async function getAll(orgId) {

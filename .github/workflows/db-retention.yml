@@ -2,11 +2,7 @@ name: Database Retention Cleanup
 
 on:
   schedule:
-    # Runs every night at midnight UTC.
-    # This is the reliable replacement for the node-cron job inside Fastify,
-    # which cannot fire when Render has put the backend to sleep.
     - cron: '0 0 * * *'
-  # Allow manual trigger from the GitHub Actions tab (useful before demos).
   workflow_dispatch:
 
 jobs:
@@ -32,8 +28,6 @@ jobs:
       - name: Run TimescaleDB chunk pruning
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-          # Neon requires SSL — this env var ensures psql uses it
-          # even when the connection string already contains sslmode=require.
           PGSSLMODE: require
         run: |
           echo "Pruning logs chunks older than 90 days..."

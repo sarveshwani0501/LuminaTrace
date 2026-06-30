@@ -16,8 +16,8 @@ services:
       - key: PORT
         value: "10000"
 
-      # ── Neon TimescaleDB ──────────────────────────────────────────────────
-      # Set DATABASE_URL in Render Dashboard → Environment (not here, for security)
+      # Neon TimescaleDB 
+      # Set DATABASE_URL in Render Dashboard -> Environment (not here, for security)
       - key: DATABASE_URL
         sync: false
       - key: DB_POOL_MAX
@@ -27,14 +27,14 @@ services:
       - key: DB_POOL_IDLE
         value: "5000"
 
-      # ── Upstash Redis ─────────────────────────────────────────────────────
+      # Upstash Redis 
       # Set both in Render Dashboard → Environment
       - key: UPSTASH_REDIS_REST_URL
         sync: false
       - key: UPSTASH_REDIS_REST_TOKEN
         sync: false
 
-      # ── Aiven Kafka ───────────────────────────────────────────────────────
+      # Aiven Kafka 
       # Set all four in Render Dashboard → Environment
       - key: KAFKA_BROKER
         sync: false
@@ -49,7 +49,7 @@ services:
       - key: KAFKA_CLIENT_KEY
         sync: false
 
-      # ── Security ──────────────────────────────────────────────────────────
+      # Security 
       # Generate with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
       - key: JWT_SECRET
         sync: false
@@ -60,7 +60,7 @@ services:
       - key: BCRYPT_ROUNDS
         value: "10"
 
-      # ── CORS ──────────────────────────────────────────────────────────────
+      # CORS 
       # Set to your exact Vercel URL — no trailing slash
       - key: CORS_ORIGIN
         sync: false
@@ -69,7 +69,7 @@ services:
       - key: FRONTEND_URL
         sync: false
 
-      # ── Email (SMTP / Resend) ─────────────────────────────────────────────
+      # Email (SMTP / Resend) 
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT
@@ -81,7 +81,7 @@ services:
       - key: RESEND_API_KEY
         sync: false
 
-      # ── App ───────────────────────────────────────────────────────────────
+      # App 
       - key: LOG_LEVEL
         value: info
       - key: LOG_FORMAT

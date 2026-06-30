@@ -56,9 +56,6 @@ const config = {
     name: getEnvVar("DB_NAME", "luminatrace"),
     url: process.env.DATABASE_URL || null,
     pool: {
-      // Neon free tier: max ~10 connections total. Keep headroom for migrations.
-      // min: 0 is critical — releases idle connections so Neon scales to zero
-      // and free compute hours are not burned while Render sleeps.
       max: getEnvInt("DB_POOL_MAX", 5),
       min: getEnvInt("DB_POOL_MIN", 0),
       idle: getEnvInt("DB_POOL_IDLE", 5000),
@@ -125,13 +122,11 @@ const config = {
   },
 };
 
-/**
- * Validates critical configuration
- */
+
 function validateConfig() {
   const errors = [];
 
-  // Validate production requirements
+ 
   if (config.app.env === "production") {
     const devSecrets = [
       "your-super-secret-jwt-key-change-this-in-production",
@@ -153,7 +148,7 @@ function validateConfig() {
     }
   }
 
-  // Database validation - ensure we have either URL or individual params
+  
   if (
     !config.database.url &&
     (!config.database.user || !config.database.password)
@@ -172,4 +167,3 @@ validateConfig();
 
 export default config;
 
-// some changes to be made once development done

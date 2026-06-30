@@ -42,7 +42,7 @@ services:
       - KAFKA_NODE_ID=1
       - KAFKA_PROCESS_ROLES=broker,controller
       - KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
-      # KEY FIX: was "localhost:9092" which broke container networking
+     
       - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
       - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
       - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
@@ -72,11 +72,11 @@ services:
     container_name: luminatrace_backend
     restart: always
     ports:
-      - "3000:3000"  # Temporarily exposed for initial setup. Remove after Nginx is configured.
+      - "3000:3000"  
     environment:
       - NODE_ENV=production
       - PORT=3000
-      # Uses Docker service names as hostnames — not localhost
+      
       - DB_HOST=timescaledb
       - DB_PORT=5432
       - DB_USER=${DB_USER}
@@ -130,7 +130,7 @@ services:
     volumes:
       - ./nginx/certbot/conf:/etc/letsencrypt
       - ./nginx/certbot/www:/var/www/certbot
-    # Run manually: docker compose run --rm certbot certonly ...
+   
 
 networks:
   luminatrace_net:

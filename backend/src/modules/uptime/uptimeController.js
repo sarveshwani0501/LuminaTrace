@@ -1,15 +1,6 @@
 import * as uptimeService from "./uptimeService.js";
 import logger from "../../utils/logger.js";
 
-// POST   /projects/:projectId/endpoints        → Add URL to monitor
-// GET    /projects/:projectId/endpoints        → List all monitored URLs
-// GET    /endpoints/:endpointId                → Get one endpoint
-// PUT    /endpoints/:endpointId                → Update endpoint (URL, interval)
-// DELETE /endpoints/:endpointId                → Stop monitoring URL
-// GET    /endpoints/:endpointId/checks         → Get recent checks (uptime history)
-// GET    /endpoints/:endpointId/incidents      → Get incident history
-// GET    /endpoints/:endpointId/uptime         → Get uptime % (99.9%)
-
 export async function createEndpoint(req, reply) {
   try {
     const { projectId } = req.params;

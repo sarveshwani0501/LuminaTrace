@@ -1,8 +1,4 @@
-// POST   /projects/:projectId/alerts        → Create a rule
-// GET    /projects/:projectId/alerts        → List all rules
-// GET    /projects/:projectId/alerts/:id    → Get one rule
-// PUT    /projects/:projectId/alerts/:id    → Update a rule
-// DELETE /projects/:projectId/alerts/:id    → Delete a rule
+
 
 const uuidSchema = { type: "string", format: "uuid" };
 
@@ -220,13 +216,12 @@ export const toggleStatusSchema = {
 };
 
 export const getAllEventsSchema = {
-  // NOTE: must be lowercase 'querystring' for Fastify to apply validation
   querystring: {
     type: "object",
     required: ["projectId"],
     properties: {
       projectId: uuidSchema,
-      serverId: uuidSchema,   // optional filter
+      serverId: uuidSchema,   
       status: { type: "string" },
       limit: { type: "string" },
       offset: { type: "string" },

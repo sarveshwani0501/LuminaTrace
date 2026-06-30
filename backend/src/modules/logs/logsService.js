@@ -4,10 +4,7 @@ import {
   parseTimeRange,
 } from "../../utils/timeWindow.js";
 
-// GET  /logs?projectId=X&timerange=1h&level=ERROR&serverId=Y&limit=100&offset=0
-// GET  /logs/recent?projectId=X&limit=100
-// GET  /logs/stats?projectId=X
-// GET  /logs/routes?projectId=X&window=1h
+
 
 export async function getLogs(projectId, filters) {
   if (!projectId) {

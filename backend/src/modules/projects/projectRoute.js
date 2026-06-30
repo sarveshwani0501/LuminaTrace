@@ -10,13 +10,7 @@ import {
   deleteProjectSchema,
 } from "./projectSchema.js";
 
-// GET    /organizations/:orgId/projects         → list all projects -- repo
-// POST   /organizations/:orgId/projects         → create a project
-// GET    /organizations/:orgId/projects/:projId → get project details + api_key
-// PUT    /organizations/:orgId/projects/:projId → update project
-// DELETE /organizations/:orgId/projects/:projId → delete project
 
-// POST /organizations/:orgId/projects/:projId/rotate-key
 
 export default async function projectRoute(fastify) {
   fastify.get(

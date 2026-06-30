@@ -104,8 +104,7 @@ export async function buildApp() {
   fastify.addHook("onClose", async () => {
     fastify.log.info("Shutting down Kafka producer...");
     await disconnectProducer();
-    // redis.quit() is a no-op for @upstash/redis (HTTP/REST client — stateless).
-    // For local ioredis it cleanly closes the TCP connection.
+    
     fastify.log.info("Closing Redis connection...");
     await redis.quit?.();
   });
@@ -173,21 +172,7 @@ export async function buildApp() {
     return health;
   });
 
-  // fastify.get("/socket-test", (request, reply) => {
-  //   import("fs").then((fs) => {
-  //     import("path").then((path) => {
-  //       const filePath = path.join(process.cwd(), "../socket-test.html");
-  //       try {
-  //         const html = fs.readFileSync(filePath, "utf8");
-  //         reply.type("text/html").send(html);
-  //       } catch (e) {
-  //         const altFilePath = path.join(process.cwd(), "socket-test.html");
-  //         const altHtml = fs.readFileSync(altFilePath, "utf8");
-  //         reply.type("text/html").send(altHtml);
-  //       }
-  //     });
-  //   });
-  // });
+  
 
   return fastify;
 }

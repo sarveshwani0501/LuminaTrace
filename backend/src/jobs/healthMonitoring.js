@@ -5,27 +5,7 @@ import * as uptimeRepo from "../modules/uptime/uptimeRepository.js";
 import redis from "../config/redis.js";
 import logger from "../utils/logger.js";
 
-// 1. scheduleHealthChecks()
-//    - Registers the cron job
-//    - Runs every 30 seconds
 
-// 2. runHealthChecks()
-//    - Main job logic
-//    - Gets all active endpoints
-//    - Pings each one
-//    - Records results
-//    - Manages incidents
-
-// 3. checkEndpoint(endpoint)
-//    - Makes HTTP request to endpoint.url
-//    - Measures response time
-//    - Returns { isUp, statusCode, responseTime, error }
-
-// 4. handleCheckResult(endpoint, result)
-//    - If UP and no incident: do nothing
-//    - If UP and has incident: resolve incident + send recovery email
-//    - If DOWN and no incident: create incident + send alert
-//    - If DOWN and has incident: increment failure count
 
 export function scheduleHealthChecks() {
   cron.schedule("*/30 * * * * *", async () => {
@@ -85,8 +65,7 @@ async function handleCheckResult(endpoint, result) {
 async function runHealthChecks() {
   const lock = "job:health-check";
 
-  // Options-object syntax works on both @upstash/redis (production) and
-  // ioredis (local dev). Positional "NX","EX",25 is ioredis-only.
+  
   const acquired = await redis.set(lock, "locked", { nx: true, ex: 25 });
 
   if (!acquired) {
@@ -94,7 +73,7 @@ async function runHealthChecks() {
     return;
   }
 
-  //  fetch every active endpoint across all projects.
+ 
   try {
     const allEndpoints = await uptimeRepo.getAllActiveEndpointsAcrossProjects();
 

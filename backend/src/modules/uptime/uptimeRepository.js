@@ -1,37 +1,5 @@
 import { pool } from "../../config/database.js";
 
-// CREATE TABLE monitored_endpoints (
-//     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-//     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-//     url VARCHAR(500) NOT NULL,
-//     check_interval_seconds INTEGER DEFAULT 30,
-//     is_active BOOLEAN DEFAULT TRUE,
-//     created_at TIMESTAMPTZ DEFAULT NOW()
-// );
-
-// -- Uptime checks basically this is the log table logging everytime the url is pinged
-
-// CREATE TABLE uptime_checks (
-//     time TIMESTAMPTZ NOT NULL,
-//     endpoint_id UUID NOT NULL REFERENCES monitored_endpoints(id) ON DELETE CASCADE,
-//     is_up BOOLEAN NOT NULL,
-//     status_code INTEGER,
-//     response_time_ms DOUBLE PRECISION,
-//     error_message TEXT
-// );
-
-// SELECT create_hypertable('uptime_checks', 'time');
-
-// CREATE TABLE uptime_incidents (
-//     id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-//     endpoint_id      UUID         NOT NULL REFERENCES monitored_endpoints(id) ON DELETE CASCADE,
-//     started_at       TIMESTAMPTZ  DEFAULT NOW(),
-//     resolved_at      TIMESTAMPTZ,
-//     status           VARCHAR(20)  DEFAULT 'open',
-//     failure_count    INTEGER      DEFAULT 1,
-//     last_error       TEXT
-// );
-
 export async function createEndpoint(projectId, data) {
   const { url, checkIntervalSeconds } = data;
 
@@ -181,15 +149,7 @@ export async function getActiveIncident(endpointId) {
   return res.rows[0];
 }
 
-// CREATE TABLE uptime_incidents (
-//     id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-//     endpoint_id      UUID         NOT NULL REFERENCES monitored_endpoints(id) ON DELETE CASCADE,
-//     started_at       TIMESTAMPTZ  DEFAULT NOW(),
-//     resolved_at      TIMESTAMPTZ,
-//     status           VARCHAR(20)  DEFAULT 'open',
-//     failure_count    INTEGER      DEFAULT 1,
-//     last_error       TEXT
-// );
+
 
 export async function createIncident(endpointId, error) {
   const res = await pool.query(
@@ -217,14 +177,7 @@ export async function incrementFailureCount(incidentId) {
   return res.rows[0];
 }
 
-// CREATE TABLE uptime_checks (
-//     time TIMESTAMPTZ NOT NULL,
-//     endpoint_id UUID NOT NULL REFERENCES monitored_endpoints(id) ON DELETE CASCADE,
-//     is_up BOOLEAN NOT NULL,
-//     status_code INTEGER,
-//     response_time_ms DOUBLE PRECISION,
-//     error_message TEXT
-// );
+
 
 export async function reportUptimeCheck(data) {
   const { endpointId, isUp, statusCode, responseTime, errorMessage } = data;
@@ -251,4 +204,4 @@ export async function getUptimeCheckTableSize() {
   return res.rows[0]?.size || "unknown";
 }
 
-//SELECT pg_size_pretty(pg_total_relation_size('logs'));
+

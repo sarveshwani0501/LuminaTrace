@@ -1,13 +1,3 @@
-// GET  /organizations/:orgId           → get org details
-// PUT  /organizations/:orgId           → update org name
-// GET  /organizations/:orgId/members   → list all members
-// POST /organizations/:orgId/members   → invite a member by email
-// DELETE /organizations/:orgId/members/:userId  → remove a member
-// users --> id , full_name , email , password_hash , is_email_verified , created_at, last_login_at
-// organizations --> id , name, slug , plan , created_at
-// organizations_members --> id , user_id , organization_id , role , joined_at
-// org_invites -->  id , organization_id , email , token , role , invited_by , accepted_at , expires_at , created_at
-
 import crypto from "crypto";
 import * as organizationRepo from "./organizationRepo.js";
 import { slugify } from "../../utils/slugify.js";
@@ -142,7 +132,6 @@ export async function createInvite(orgId, email, role, invitedBy) {
     });
   } catch (error) {
     console.error("Failed to send invite email", error);
-    // Non-fatal: invite record is already created, user can be re-invited
   }
 
   return { invite, inviteLink };

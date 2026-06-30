@@ -1,15 +1,6 @@
 import { pool } from "../../config/database.js";
 import { getListItems, getHash } from "../../config/redis.js";
-// CREATE TABLE logs (
-//     time TIMESTAMPTZ NOT NULL,
-//     project_id UUID NOT NULL REFERENCES projects(id),
-//     server_id UUID REFERENCES servers(id),
-//     level VARCHAR(10) NOT NULL,
-//     message TEXT NOT NULL,
-//     trace_id UUID,
-//     span_id UUID,
-//     metadata JSONB DEFAULT '{}'
-// );
+
 
 export async function insertLog(log) {
   await pool.query(
@@ -59,10 +50,7 @@ export async function insertLogBatch(logs) {
   }
 }
 
-// GET  /logs?projectId=X&from=...&to=...&level=ERROR&serverId=Y&limit=100&offset=0
-// GET  /logs/recent?projectId=X&limit=100
-// GET  /logs/stats?projectId=X
-// GET  /logs/routes?projectId=X&window=1h
+
 
 export async function getLogs(projectId, filters = {}) {
   try {
@@ -171,7 +159,7 @@ export async function getRecentLogsFromRedis(projectId, limit = 100) {
         console.error("Failed to parse log item:", err);
       }
     }
-    //console.log("Parsed Logs: ", parsedLogs);
+    
     return parsedLogs;
   } catch (error) {
     console.error("Error fetching recent logs from Redis:", error);

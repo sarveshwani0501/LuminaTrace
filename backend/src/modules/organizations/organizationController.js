@@ -1,11 +1,3 @@
-// GET  /organizations/:orgId           → get org details
-// PUT  /organizations/:orgId           → update org name
-// GET  /organizations/:orgId/members   → list all members
-// POST /organizations/:orgId/members   → invite a member by email
-// DELETE /organizations/:orgId/members/:userId  → remove a member
-// GET /organizations/:orgId/invites
-// DELETE /organizations/:orgId/invites/:inviteId
-
 import * as orgService from "./organizationService.js";
 
 export async function createOrganization(req, reply) {

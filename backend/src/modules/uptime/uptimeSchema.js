@@ -8,23 +8,6 @@ const endPointSchema = {
   is_active: { type: "boolean" },
   created_at: { type: "string" },
 };
-// CREATE TABLE monitored_endpoints (
-//     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-//     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-//     url VARCHAR(500) NOT NULL,
-//     check_interval_seconds INTEGER DEFAULT 30,
-//     is_active BOOLEAN DEFAULT TRUE,
-//     created_at TIMESTAMPTZ DEFAULT NOW()
-// );
-
-// POST   /projects/:projectId/endpoints        → Add URL to monitor
-// GET    /projects/:projectId/endpoints        → List all monitored URLs
-// GET    /endpoints/:endpointId                → Get one endpoint
-// PUT    /endpoints/:endpointId                → Update endpoint (URL, interval)
-// DELETE /endpoints/:endpointId                → Stop monitoring URL
-// GET    /endpoints/:endpointId/checks         → Get recent checks (uptime history)
-// GET    /endpoints/:endpointId/incidents      → Get incident history
-// GET    /endpoints/:endpointId/uptime         → Get uptime % (99.9%)
 
 export const createEndpointSchema = {
   body: {
@@ -180,21 +163,3 @@ export const getUptimePercentSchema = {
   },
 };
 
-// CREATE TABLE uptime_incidents (
-//     id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-//     endpoint_id      UUID         NOT NULL REFERENCES monitored_endpoints(id) ON DELETE CASCADE,
-//     started_at       TIMESTAMPTZ  DEFAULT NOW(),
-//     resolved_at      TIMESTAMPTZ,
-//     status           VARCHAR(20)  DEFAULT 'open',
-//     failure_count    INTEGER      DEFAULT 1,
-//     last_error       TEXT
-// );
-
-// CREATE TABLE uptime_checks (
-//     time TIMESTAMPTZ NOT NULL,
-//     endpoint_id UUID NOT NULL REFERENCES monitored_endpoints(id) ON DELETE CASCADE,
-//     is_up BOOLEAN NOT NULL,
-//     status_code INTEGER,
-//     response_time_ms DOUBLE PRECISION,
-//     error_message TEXT
-// );

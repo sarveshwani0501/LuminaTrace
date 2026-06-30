@@ -1,23 +1,6 @@
 import { pool } from "../../config/database.js";
 
-// POST   /projects/:projectId/alerts        → Create a rule
-// GET    /projects/:projectId/alerts        → List all rules
-// GET    /projects/:projectId/alerts/:id    → Get one rule
-// PATCH    /projects/:projectId/alerts/:id    → Update a rule
-// DELETE /projects/:projectId/alerts/:id    → Delete a rule
-// PATCH  /projects/:projectId/alerts/:id/toggle -> Toggle activeness of rule
-// GET /projects/:projectId/alerts/:id/events  → List all times this alert fired
 
-// CREATE TABLE alert_rules (
-//     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-//     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-//     metric_name VARCHAR(50) NOT NULL,
-//     condition VARCHAR(10) NOT NULL,
-//     threshold DOUBLE PRECISION NOT NULL,
-//     notification_email VARCHAR(255) NOT NULL,
-//     is_active BOOLEAN DEFAULT TRUE,
-//     created_at TIMESTAMPTZ DEFAULT NOW()
-// );
 
 export async function createAlertRule(
   projectId,

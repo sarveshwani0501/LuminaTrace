@@ -122,13 +122,7 @@ export async function startMetricsWorker() {
 
         // socket io code
 
-        // metric.timestamp,
-        // metric.projectId,
-        // metric.serverId,
-        // metric.name,
-        // metric.value,
-        // metric.unit,
-        // metric.tags ? JSON.stringify(metric.tags) : "{}"
+       
 
         const io = getIO();
 

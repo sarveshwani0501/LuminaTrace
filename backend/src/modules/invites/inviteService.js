@@ -2,10 +2,7 @@ import * as inviteRepo from "./inviteRepository.js";
 import { pool } from "../../config/database.js";
 import { compareHash, hashText } from "../../utils/hash.js";
 
-// users --> id , full_name , email , password_hash , is_email_verified , created_at, last_login_at
-// organizations --> id , name, slug , plan , created_at
-// organizations_members --> id , user_id , organization_id , role , joined_at
-// org_invites -->  id , organization_id , email , token , role , invited_by , accepted_at , expires_at , created_at
+
 
 export async function getInviteInfo(token) {
   const invite = await inviteRepo.getInviteByToken(token);
