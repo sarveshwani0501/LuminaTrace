@@ -156,7 +156,7 @@ export async function buildApp() {
     }
 
     try {
-      await redis.ping();
+      await redis.get("__health__"); // works on both ioredis and Upstash REST client
       health.redis = "connected";
     } catch (error) {
       health.status = "degraded";
@@ -164,6 +164,7 @@ export async function buildApp() {
         health.error = error.message;
       }
     }
+
 
     if (health.database === "disconnected" || health.redis === "disconnected") {
       reply.code(503);

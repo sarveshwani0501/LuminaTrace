@@ -174,7 +174,7 @@ export async function verifyOTPForEmailVerification(email, otp) {
     throw new Error('OTP expired');
   }
 
-  if(storedOTP !== otp) {
+  if(String(storedOTP) !== String(otp)) {
     throw new Error('Invalid OTP');
   }
 

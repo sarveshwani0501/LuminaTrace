@@ -36,10 +36,18 @@ export async function startLogsWorker() {
       try {
         log = JSON.parse(message.value.toString());
 
+        
+        
+        if (log.message === "__kafka_heartbeat__") {
+          logger.debug("Kafka heartbeat received, skipping");
+          return;
+        }
+
         logger.debug(
           { projectId: log.projectId, level: log.level },
           "Log is being Processed",
         )
+
 
         if (log.serverId) {
           const server = await findServerById({ serverId: log.serverId });

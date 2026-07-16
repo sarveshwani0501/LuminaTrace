@@ -1,6 +1,7 @@
 import { scheduleDataRetention } from "./dataRetention.js";
 import { scheduleHealthChecks } from "./healthMonitoring.js";
 import { scheduleServerStatusCheck } from "./serverStatus.js";
+import { scheduleKafkaHeartbeat } from "./kafkaHeartbeat.js";
 import logger from "../utils/logger.js";
 
 let jobsStarted = false;
@@ -16,6 +17,7 @@ export function startBackgroundJobs() {
   scheduleServerStatusCheck();
   scheduleHealthChecks();
   scheduleDataRetention();
+  scheduleKafkaHeartbeat();
 
   jobsStarted = true;
 

@@ -98,7 +98,7 @@ export async function startMetricsWorker() {
 
         if (metric.name === "response_time" || metric.name === "latency") {
           const statsKey = `stats:${metric.projectId}:today`;
-          await incrementHashField(statsKey, "response_time", metric.value);
+          await incrementHashField(statsKey, "latency_sum", metric.value);
           await incrementHashField(statsKey, "latency_count", 1);
 
           const now = Date.now();
