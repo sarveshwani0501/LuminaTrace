@@ -83,7 +83,7 @@ const OTPVerificationPage = () => {
     setError(null);
     try {
       await dispatch(verifyOTP({ email, otp: otpValue })).unwrap();
-      navigate('/login');
+      navigate('/app/dashboard');
     } catch (err) {
       setError(err || 'Invalid or expired verification code');
       // shake the inputs by resetting — user should re-enter
